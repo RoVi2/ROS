@@ -1,0 +1,8 @@
+#request constants
+#request fields
+bool gripper
+float32[7] positions
+float32[7] commands
+---
+#response constants
+#response fields

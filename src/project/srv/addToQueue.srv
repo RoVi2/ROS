@@ -1,0 +1,10 @@
+#request constants
+#request fields
+bool gripper
+bool endOfQueue
+float32[7] positions
+float32[7] commands
+---
+#response constants
+#response fields
+bool sucess
