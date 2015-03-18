@@ -1,0 +1,13 @@
+#request constants
+int8 CMD_STOP=1
+int8 CMD_FORWARD=2
+int8 CMD_REVERSE=3
+int8 CMD_GRIP=4
+int8 CMD_RELEASE=5
+
+#request fields
+int8 command
+---
+#response constants
+#response fields
+bool result

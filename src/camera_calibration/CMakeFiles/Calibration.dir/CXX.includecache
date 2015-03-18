@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/mthomsen/camera_calibration/camera_calibration.cpp
+iostream
+-
+sstream
+-
+time.h
+-
+stdio.h
+-
+opencv2/opencv.hpp
+-
+

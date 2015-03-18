@@ -1,0 +1,7 @@
+#request constants
+#request fields
+---
+#response constants
+#response fields
+float32[7] positions
+float32[7] commands
