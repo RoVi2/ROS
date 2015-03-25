@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <pa10controller_dummy/getJointConfig.h>
 #include <pa10controller_dummy/setJointConfig.h>
-#include <pa10controller_dummy//addToQueue.h>
+#include <pa10controller_dummy/addToQueue.h>
 #include <boost/algorithm/string.hpp>
 
 #define LISTSIZE 11
