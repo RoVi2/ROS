@@ -4,8 +4,17 @@ project(tracking)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED)
 find_package(OpenCV REQUIRED)
+
+find_package(catkin REQUIRED COMPONENTS
+  sensor_msgs
+  cv_bridge
+  roscpp
+  rospy
+  std_msgs
+  image_transport
+  message_generation
+)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -79,7 +88,7 @@ find_package(OpenCV REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES tracking
-#  CATKIN_DEPENDS other_catkin_pkg
+#  CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
 
@@ -89,7 +98,9 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories(include)
+include_directories(
+	${catkin_INCLUDE_DIRS}
+)
 
 ## Declare a cpp library
 # add_library(tracking
@@ -101,7 +112,7 @@ add_executable(tracking_node src/tracking_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-#add_dependencies(tracking_node tracking_generate_messages_cpp)
+add_dependencies(tracking_node tracking_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(tracking_node
