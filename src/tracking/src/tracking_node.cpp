@@ -31,6 +31,8 @@ using namespace cv;
 
 #define SUBSCRIBER "/monocamera_camera/image"
 #define TOPIC "/tracking/points"
+#define PARAM_VIEW_IMAGES "/tracking/view_images"
+#define PARAM_VIEW_RESULTS "/tracking/view_results"
 
 //Global Image (Sorry for this)
 static Mat globalImage;
@@ -46,6 +48,12 @@ static Mat globalImage;
  * @return The center of the ball
  */
 vector<Rect> ballsRecognition(Mat & frame, Mat & res){
+	//Get Parameters
+	bool view_images = 0;
+	ros::param::get(PARAM_VIEW_IMAGES, view_images);
+	bool view_results = 0;
+	ros::param::get(PARAM_VIEW_RESULTS, view_results);
+
 	//The vector to store the balls
 	vector<Rect> ballsBox;
 
@@ -73,7 +81,7 @@ vector<Rect> ballsRecognition(Mat & frame, Mat & res){
 		// <<<<< Improving the result
 
 		// Thresholding viewing
-		//imshow("Threshold", rangeRes);
+		if (view_images) imshow("Threshold", rangeRes);
 
 		// >>>>> Contours detection
 		vector<vector<Point> > contours;
@@ -101,25 +109,26 @@ vector<Rect> ballsRecognition(Mat & frame, Mat & res){
 			}
 		}
 		// <<<<< Filtering
-		cout << "Balls found:" << ballsBox.size() << endl;
-
+		if (view_results) cout << "Balls found:" << ballsBox.size() << endl;
 
 		// >>>>> Detection result
-		for (size_t i = 0; i < balls.size(); i++)
-		{
-			drawContours(res, balls, i, CV_RGB(20,150,20), 1);
-			rectangle(res, ballsBox[i], CV_RGB(0,255,0), 2);
+		if (view_images){
+			for (size_t i = 0; i < balls.size(); i++)
+			{
+				drawContours(res, balls, i, CV_RGB(20,150,20), 1);
+				rectangle(res, ballsBox[i], CV_RGB(0,255,0), 2);
 
-			Point center;
-			center.x = ballsBox[i].x + ballsBox[i].width / 2;
-			center.y = ballsBox[i].y + ballsBox[i].height / 2;
-			circle(res, center, 2, CV_RGB(20,150,20), -1);
+				Point center;
+				center.x = ballsBox[i].x + ballsBox[i].width / 2;
+				center.y = ballsBox[i].y + ballsBox[i].height / 2;
+				circle(res, center, 2, CV_RGB(20,150,20), -1);
 
-			stringstream sstr;
-			sstr << "(" << center.x << "," << center.y << ")";
-			putText(res, sstr.str(),
-					Point(center.x + 3, center.y - 3),
-					FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(20,150,20), 2);
+				stringstream sstr;
+				sstr << "(" << center.x << "," << center.y << ")";
+				putText(res, sstr.str(),
+						Point(center.x + 3, center.y - 3),
+						FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(20,150,20), 2);
+			}
 		}
 	}
 	// <<<<< Detection result
@@ -158,6 +167,10 @@ int main(int argc, char **argv)
 	image_transport::ImageTransport it(nh);
 	image_transport::Subscriber image_sub;
 	ros::Publisher points_pub;
+
+	// Parameters
+	nh.setParam(PARAM_VIEW_IMAGES, false);
+	nh.setParam(PARAM_VIEW_RESULTS, false);
 
 	// Get a new image and store it in the globalImage
 	image_sub = it.subscribe(SUBSCRIBER, 1, getROSimage);
@@ -233,19 +246,24 @@ int main(int argc, char **argv)
 
 	while(ros::ok()){
 
+		//Get parameters
+		bool view_images; //Show the images in new windows
+		nh.getParam(PARAM_VIEW_IMAGES, view_images);
+
+		bool view_results; //Show the results through the terminal
+		nh.getParam(PARAM_VIEW_RESULTS, view_results);
+
 		// And copy it to a Mat where we can work in
 		Mat frame = globalImage;
+		if (frame.empty()) ROS_ERROR("No image received");
 
-		if (frame.empty()){
-			ROS_ERROR("No image received");
-			//return 0;
-		}
-
+		//Get dT
 		double precTick = ticks;
 		ticks = (double) getTickCount();
 
 		double dT = (ticks - precTick) / getTickFrequency(); //seconds
 
+		//Matrix to show the results
 		Mat res;
 		frame.copyTo(res);
 		if (found)
@@ -255,49 +273,45 @@ int main(int argc, char **argv)
 			kf.transitionMatrix.at<float>(9) = dT;
 			// <<<< Matrix A
 
-			cout << "dT: " << dT << endl;
+			if (view_results) cout << "dT: " << dT << endl;
 
 			state = kf.predict();
 
+			//Publish the points
 			point_msg.x = state.at<float>(0);
 			point_msg.y = state.at<float>(1);
 
 			points_pub.publish(point_msg);
 
 			//Show the prediction in the res image
+			if (view_results) cout << "State post:" << endl << state << endl;
 
-			cout << "State post:" << endl << state << endl;
+			if(view_images){
+				Rect predRect;
+				predRect.width = state.at<float>(4);
+				predRect.height = state.at<float>(5);
+				predRect.x = state.at<float>(0) - predRect.width / 2;
+				predRect.y = state.at<float>(1) - predRect.height / 2;
 
-			Rect predRect;
-			predRect.width = state.at<float>(4);
-			predRect.height = state.at<float>(5);
-			predRect.x = state.at<float>(0) - predRect.width / 2;
-			predRect.y = state.at<float>(1) - predRect.height / 2;
+				Point center;
+				center.x = state.at<float>(0);
+				center.y = state.at<float>(1);
+				circle(res, center, 2, CV_RGB(255,0,0), -1);
 
-			cout << "X: " << state.at<float>(0)  << " - Y: " << state.at<float>(1) << endl;
-
-			Point center;
-			center.x = state.at<float>(0);
-			center.y = state.at<float>(1);
-			circle(res, center, 2, CV_RGB(255,0,0), -1);
-
-			rectangle(res, predRect, CV_RGB(255,0,0), 2);
+				rectangle(res, predRect, CV_RGB(255,0,0), 2);
+			}
 		}
 
-		//Ball recognision with Color > Contour > Center of masses
+		//Ball recognition with Color > Contour > Center of masses
 		vector<Rect> ballsBox = ballsRecognition(frame, res);
 
 		// >>>>> Kalman Update
 		if (ballsBox.size() == 0)
 		{
 			notFoundCount++;
-			cout << "notFoundCount:" << notFoundCount << endl;
-			if( notFoundCount >= 10 )
-			{
-				found = false;
-			}
-			else
-				kf.statePost = state;
+			if (view_results) cout << "notFoundCount:" << notFoundCount << endl;
+			if(notFoundCount >= 10) found = false;
+			else kf.statePost = state;
 		}
 		else
 		{
@@ -331,18 +345,18 @@ int main(int argc, char **argv)
 			else
 				kf.correct(meas); // Kalman Correction
 
-			//cout << "Measure matrix:" << endl << meas << endl;
+			if (view_results) cout << "Measure matrix:" << endl << meas << endl;
 		}
 		// <<<<< Kalman Update
 
 		// Final result
-		if (!globalImage.empty()) imshow("Global Image", globalImage);
+		if (!globalImage.empty() && view_images) imshow("Global Image", globalImage);
 		waitKey(5);
-		if (!res.empty()) imshow("Final Image", res);
+		if (!res.empty() && view_images) imshow("Final Image", res);
 		waitKey(5);
 
-	    ros::spinOnce();
-	    loop_rate.sleep();
+		ros::spinOnce();
+		loop_rate.sleep();
 	}
 	return 0;
 }
