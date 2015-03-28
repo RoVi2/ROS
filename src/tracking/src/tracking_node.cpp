@@ -15,6 +15,7 @@
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
+#include <geometry_msgs/Point.h>
 
 // STD
 #include <iostream>
@@ -149,7 +150,7 @@ void getROSimage(const sensor_msgs::ImageConstPtr& msg)
  */
 int main(int argc, char **argv)
 {
-	ROS_WARN("Start!");
+	ROS_INFO("Start!");
 
 	ros::init(argc, argv, "tracking_node");
 
@@ -162,7 +163,8 @@ int main(int argc, char **argv)
 	image_sub = it.subscribe(SUBSCRIBER, 1, getROSimage);
 
 	//std_msgs::String poisnt;
-	//points_pub = nh.advertise<std_msgs::String>(TOPIC, 1);
+	geometry_msgs::Point point_msg;
+	points_pub = nh.advertise<geometry_msgs::Point>(TOPIC, 1);
 
 	// >>>> Kalman Filter
 	int stateSize = 6;
@@ -256,7 +258,15 @@ int main(int argc, char **argv)
 			cout << "dT: " << dT << endl;
 
 			state = kf.predict();
-			//cout << "State post:" << endl << state << endl;
+
+			point_msg.x = state.at<float>(0);
+			point_msg.y = state.at<float>(1);
+
+			points_pub.publish(point_msg);
+
+			//Show the prediction in the res image
+
+			cout << "State post:" << endl << state << endl;
 
 			Rect predRect;
 			predRect.width = state.at<float>(4);
@@ -264,7 +274,7 @@ int main(int argc, char **argv)
 			predRect.x = state.at<float>(0) - predRect.width / 2;
 			predRect.y = state.at<float>(1) - predRect.height / 2;
 
-			cout << "X: " << state.at<float>(0) << " - Y: " << state.at<float>(1) << endl;
+			cout << "X: " << state.at<float>(0)  << " - Y: " << state.at<float>(1) << endl;
 
 			Point center;
 			center.x = state.at<float>(0);
