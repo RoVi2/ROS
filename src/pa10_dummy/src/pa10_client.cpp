@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <pa10controller_dummy/getJointConfig.h>
 #include <pa10controller_dummy/setJointConfig.h>
-#include <pa10controller_dummy//addToQueue.h>
+#include <pa10controller_dummy/addToQueue.h>
 #include <boost/algorithm/string.hpp>
 
 #define LISTSIZE 11
@@ -25,29 +25,29 @@ int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "pa10client");
 	ros::NodeHandle n;
-   ros::ServiceClient client = n.serviceClient<pa10controller::setJointConfig>("pa10/setJointsConfig");
-//   ros::ServiceClient client = n.serviceClient<pa10controller::addToQueue>("pa10/addItemtoQueue");
-//	pa10controller::addToQueue config;
-	
-    pa10controller::setJointConfig config;
+	ros::ServiceClient client = n.serviceClient<pa10controller::setJointConfig>("pa10/setJointsConfig");
+	//   ros::ServiceClient client = n.serviceClient<pa10controller::addToQueue>("pa10/addItemtoQueue");
+	//	pa10controller::addToQueue config;
+
+	pa10controller::setJointConfig config;
 
 	config.request.gripper =  0;
-		for (uint8_t i = 0; i < 7; i++) {
-			config.request.commands[i] = 3;
+	for (uint8_t i = 0; i < 7; i++) {
+		config.request.commands[i] = 3;
+		config.request.positions[i] = 0;
+		if(i == 0)
 			config.request.positions[i] = 0;
-            if(i == 0)
-			    config.request.positions[i] = 0;
-		}
+	}
 
 
-		if (!client.call(config)) {
-			ROS_ERROR("Unable to send config to PA10");
-			return 0;
-		}
-    return 1;
-//	
+	if (!client.call(config)) {
+		ROS_ERROR("Unable to send config to PA10");
+		return 0;
+	}
+	return 1;
+	//
 
-/*
+	/*
 	ifstream infile;
 	string sLine = "";
 	infile.open("points.txt");
@@ -58,11 +58,11 @@ int main(int argc, char **argv)
 		vector <string> fields;
 		ROS_INFO("Format line %d %s",linecount,sLine.c_str());
        // std::cout << sLine <<std::endl;
-		
+
         boost::split(fields,sLine,boost::is_any_of(";"));
 		//for(int i = 0; i < fields.size(); i++)
         //    ROS_INFO(" %s ", fields[i].c_str());
-        
+
         if (fields.size() == 16) {
 			items.push_back(queueItem());
 			items.back().gripper = boost::lexical_cast<bool>(fields[0]);
@@ -85,11 +85,11 @@ int main(int argc, char **argv)
 
 		} else
 			ROS_INFO("Format error in line %d",linecount);
-       
+
 		linecount++;
 	}
 	infile.close();
-    
+
 
 	for (vector<queueItem>::iterator it = items.begin(); it != items.end(); it++) {
 		queueItem item = *it;
@@ -107,8 +107,8 @@ int main(int argc, char **argv)
 			ROS_ERROR("Unable to send config to PA10");
 			return 0;
 		}*/
-//		std::cout <<"Next point"<< std::endl;
-//		int tmp = 0;
-//		std::cin >> tmp;
-//	}
+	//		std::cout <<"Next point"<< std::endl;
+	//		int tmp = 0;
+	//		std::cin >> tmp;
+	//	}
 }
