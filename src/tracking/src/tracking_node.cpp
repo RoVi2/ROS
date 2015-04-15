@@ -34,10 +34,6 @@ using namespace cv;
 #define PARAM_VIEW_IMAGES "/tracking/view_images"
 #define PARAM_VIEW_RESULTS "/tracking/view_results"
 
-//Global Image (Sorry for this)
-static Mat globalImage;
-
-
 //--------------------------------------------------
 //					Methods
 //--------------------------------------------------
@@ -49,9 +45,9 @@ static Mat globalImage;
  */
 vector<Rect> ballsRecognition(Mat & frame, Mat & res){
 	//Get Parameters
-	bool view_images = 0;
+	bool view_images = false;
 	ros::param::get(PARAM_VIEW_IMAGES, view_images);
-	bool view_results = 0;
+	bool view_results = false;
 	ros::param::get(PARAM_VIEW_RESULTS, view_results);
 
 	//The vector to store the balls
@@ -141,13 +137,14 @@ vector<Rect> ballsRecognition(Mat & frame, Mat & res){
 //					Tracking Class
 //--------------------------------------------------
 
-void getROSimage(const sensor_msgs::ImageConstPtr& msg)
+void getROSimage(const sensor_msgs::ImageConstPtr& msg, Mat & image)
 {
 	cv_bridge::CvImagePtr cv_ptr;
 
 	// Converts the image
 	cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-	globalImage = cv_ptr->image;
+	image = cv_ptr->image;
+
 };
 
 
@@ -159,7 +156,7 @@ void getROSimage(const sensor_msgs::ImageConstPtr& msg)
  */
 int main(int argc, char **argv)
 {
-	ROS_INFO("Start!");
+	ROS_INFO("2D Tracking Started!");
 
 	ros::init(argc, argv, "tracking_node");
 
@@ -172,10 +169,13 @@ int main(int argc, char **argv)
 	nh.setParam(PARAM_VIEW_IMAGES, false);
 	nh.setParam(PARAM_VIEW_RESULTS, false);
 
-	// Get a new image and store it in the globalImage
-	image_sub = it.subscribe(SUBSCRIBER, 1, getROSimage);
+	// The Mat to store the original image
+	Mat imageOriginal;
 
-	//std_msgs::String poisnt;
+	// Get a new image and store it in the globalImage
+	image_sub = it.subscribe(SUBSCRIBER, 1, boost::bind(getROSimage, _1, boost::ref(imageOriginal)));
+
+	//std_msgs::String points;
 	geometry_msgs::Point point_msg;
 	points_pub = nh.advertise<geometry_msgs::Point>(TOPIC, 1);
 
@@ -194,8 +194,8 @@ int main(int argc, char **argv)
 
 	// Transition State Matrix A
 	// Note: set dT at each processing step!
-	// [ 1 0 dT 0  0 0 ]
-	// [ 0 1 0  dT 0 0 ]
+	// [ 1 0 dT 0  0.5*dT*dT 0 ]
+	// [ 0 1 0  dT 0 0.5*dT*dT ]
 	// [ 0 0 1  0  0 0 ]
 	// [ 0 0 0  1  0 0 ]
 	// [ 0 0 0  0  1 0 ]
@@ -217,21 +217,20 @@ int main(int argc, char **argv)
 	// [ Ex 0  0    0 0    0 ]
 	// [ 0  Ey 0    0 0    0 ]
 	// [ 0  0  Ev_x 0 0    0 ]
-	// [ 0  0  0    1 Ev_y 0 ]
-	// [ 0  0  0    0 1    Ew ]
-	// [ 0  0  0    0 0    Eh ]
+	// [ 0  0  0    Ev_y 0 0 ]
+	// [ 0  0  0    0 Ea_x 0 ]
+	// [ 0  0  0    0 0 Ea_y ]
 	//setIdentity(kf.processNoiseCov, Scalar(1e-2));
 	kf.processNoiseCov.at<float>(0) = 1e-2;
 	kf.processNoiseCov.at<float>(7) = 1e-2;
 	kf.processNoiseCov.at<float>(14) = 2.0f;
 	kf.processNoiseCov.at<float>(21) = 1.0f;
-	kf.processNoiseCov.at<float>(28) = 1e-2;
-	kf.processNoiseCov.at<float>(35) = 1e-2;
+	kf.processNoiseCov.at<float>(28) = 3.0f;
+	kf.processNoiseCov.at<float>(35) = 3.0f;
 
 	// Measures Noise Covariance Matrix R
 	setIdentity(kf.measurementNoiseCov, Scalar(1e-1));
 	// <<<< Kalman Filter
-
 
 	double ticks = 0;
 	bool found = false;
@@ -254,7 +253,7 @@ int main(int argc, char **argv)
 		nh.getParam(PARAM_VIEW_RESULTS, view_results);
 
 		// And copy it to a Mat where we can work in
-		Mat frame = globalImage;
+		Mat frame = imageOriginal;
 		if (frame.empty()) ROS_ERROR("No image received");
 
 		//Get dT
@@ -271,6 +270,8 @@ int main(int argc, char **argv)
 			// >>>> Matrix A
 			kf.transitionMatrix.at<float>(2) = dT;
 			kf.transitionMatrix.at<float>(9) = dT;
+			kf.transitionMatrix.at<float>(4) = 0.5*dT*dT;
+			kf.transitionMatrix.at<float>(11) = 0.5*dT*dT;
 			// <<<< Matrix A
 
 			if (view_results) cout << "dT: " << dT << endl;
@@ -319,12 +320,10 @@ int main(int argc, char **argv)
 
 			meas.at<float>(0) = ballsBox[0].x + ballsBox[0].width / 2;
 			meas.at<float>(1) = ballsBox[0].y + ballsBox[0].height / 2;
-			meas.at<float>(2) = (float)ballsBox[0].width;
-			meas.at<float>(3) = (float)ballsBox[0].height;
 
 			if (!found) // First detection!
 			{
-				// >>>> Initialization
+				//setIdentity(kf.errorCovPre, 1);
 				kf.errorCovPre.at<float>(0) = 1; // px
 				kf.errorCovPre.at<float>(7) = 1; // px
 				kf.errorCovPre.at<float>(14) = 1;
@@ -334,11 +333,6 @@ int main(int argc, char **argv)
 
 				state.at<float>(0) = meas.at<float>(0);
 				state.at<float>(1) = meas.at<float>(1);
-				state.at<float>(2) = 0;
-				state.at<float>(3) = 0;
-				state.at<float>(4) = meas.at<float>(2);
-				state.at<float>(5) = meas.at<float>(3);
-				// <<<< Initialization
 
 				found = true;
 			}
@@ -350,7 +344,7 @@ int main(int argc, char **argv)
 		// <<<<< Kalman Update
 
 		// Final result
-		if (!globalImage.empty() && view_images) imshow("Global Image", globalImage);
+		if (!imageOriginal.empty() && view_images) imshow("Original Image", imageOriginal);
 		waitKey(5);
 		if (!res.empty() && view_images) imshow("Final Image", res);
 		waitKey(5);
