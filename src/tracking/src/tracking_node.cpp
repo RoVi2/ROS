@@ -29,7 +29,7 @@ using namespace cv;
 #define MAX_H_BLUE 300
 // <<<<< Color to be tracked
 
-#define SUBSCRIBER "/monocamera_camera/image"
+#define SUBSCRIBER "/image_raw"
 #define TOPIC "/tracking/points"
 #define PARAM_VIEW_IMAGES "/tracking/view_images"
 #define PARAM_VIEW_RESULTS "/tracking/view_results"
@@ -128,6 +128,7 @@ vector<Rect> ballsRecognition(Mat & frame, Mat & res){
 		}
 	}
 	// <<<<< Detection result
+	ROS_INFO("Detecting");
 	return ballsBox;
 }
 
@@ -178,6 +179,7 @@ int main(int argc, char **argv)
 	//std_msgs::String points;
 	geometry_msgs::Point point_msg;
 	points_pub = nh.advertise<geometry_msgs::Point>(TOPIC, 1);
+
 
 	// >>>> Kalman Filter
 	int stateSize = 6;
