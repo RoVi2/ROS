@@ -170,7 +170,7 @@ int main(int argc, char **argv)
 	ros::Publisher points_pub;
 
 	// Parameters
-	nh.setParam(PARAM_VIEW_IMAGES, false);
+	nh.setParam(PARAM_VIEW_IMAGES, true);
 	nh.setParam(PARAM_VIEW_RESULTS, false);
 
 	// Get a new image and store it in the globalImage
@@ -247,7 +247,7 @@ int main(int argc, char **argv)
 	/*
 	 * Refresh frequency
 	 */
-	ros::Rate loop_rate(1);
+	ros::Rate loop_rate(4);
 
 	while(ros::ok()){
 
@@ -273,10 +273,10 @@ int main(int argc, char **argv)
 		frame.copyTo(res);
 		if (found)
 		{
-			// >>>> Matrix A
+			// >>>>> Kalman prediction
+			//Matrix A
 			kf.transitionMatrix.at<float>(2) = dT;
 			kf.transitionMatrix.at<float>(9) = dT;
-			// <<<< Matrix A
 
 			if (view_results) cout << "dT: " << dT << endl;
 
@@ -285,7 +285,6 @@ int main(int argc, char **argv)
 			//Publish the points
 			point_msg.x = state.at<float>(0);
 			point_msg.y = state.at<float>(1);
-
 			points_pub.publish(point_msg);
 
 			//Show the prediction in the res image
@@ -324,8 +323,8 @@ int main(int argc, char **argv)
 
 			meas.at<float>(0) = ballsBox[0].x + ballsBox[0].width / 2;
 			meas.at<float>(1) = ballsBox[0].y + ballsBox[0].height / 2;
-			meas.at<float>(2) = (float)ballsBox[0].width;
-			meas.at<float>(3) = (float)ballsBox[0].height;
+			//meas.at<float>(2) = (float)ballsBox[0].width;
+			//meas.at<float>(3) = (float)ballsBox[0].height;
 
 			if (!found) // First detection!
 			{
@@ -341,8 +340,8 @@ int main(int argc, char **argv)
 				state.at<float>(1) = meas.at<float>(1);
 				state.at<float>(2) = 0;
 				state.at<float>(3) = 0;
-				state.at<float>(4) = meas.at<float>(2);
-				state.at<float>(5) = meas.at<float>(3);
+				//state.at<float>(4) = meas.at<float>(2);
+				//state.at<float>(5) = meas.at<float>(3);
 				// <<<< Initialization
 
 				found = true;
