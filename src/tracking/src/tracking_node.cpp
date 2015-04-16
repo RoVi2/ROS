@@ -29,8 +29,8 @@ using namespace cv;
 #define MAX_H_BLUE 300
 // <<<<< Color to be tracked
 
-//#define SUBSCRIBER "/monocamera_camera/image"
-#define SUBSCRIBER "/image_raw"
+#define SUBSCRIBER "/monocamera_camera/image"
+//#define SUBSCRIBER "/image_raw"
 #define TOPIC "/tracking/points"
 #define PARAM_VIEW_IMAGES "/tracking/view_images"
 #define PARAM_VIEW_RESULTS "/tracking/view_results"
