@@ -198,11 +198,11 @@ int main(int argc, char **argv)
 	// Transition State Matrix A
 	// Note: set dT at each processing step!
 	// [ 1 0 dT 0  0.5*dT*dT 0 ]
-	// [ 0 1 0  dT 0 0.5*dT*dT ]
-	// [ 0 0 1  0  0 0 ]
-	// [ 0 0 0  1  0 0 ]
-	// [ 0 0 0  0  1 0 ]
-	// [ 0 0 0  0  0 1 ]
+	// [ 0 1 0  dT 0 		 0.5*dT*dT ]
+	// [ 0 0 1  0  0 		 0 ]
+	// [ 0 0 0  1  0 		 0 ]
+	// [ 0 0 0  0  1 		 0 ]
+	// [ 0 0 0  0  0 		 1 ]
 	setIdentity(kf.transitionMatrix);
 
 	// Measure Matrix H
@@ -292,12 +292,14 @@ int main(int argc, char **argv)
 				Rect predRect;
 				predRect.width = state.at<float>(4);
 				predRect.height = state.at<float>(5);
+				predRect.x = state.at<float>(0) - predRect.width / 2;
+         		predRect.y = state.at<float>(1) - predRect.height / 2;
+
 
 				Point center;
 				center.x = state.at<float>(0);
 				center.y = state.at<float>(1);
 				circle(res, center, 2, CV_RGB(255,0,0), -1);
-
 				rectangle(res, predRect, CV_RGB(255,0,0), 2);
 			}
 		}
