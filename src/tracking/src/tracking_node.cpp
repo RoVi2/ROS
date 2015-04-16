@@ -198,11 +198,11 @@ int main(int argc, char **argv)
 	// Transition State Matrix A
 	// Note: set dT at each processing step!
 	// [ 1 0 dT 0  0.5*dT*dT 0 ]
-	// [ 0 1 0  dT 0 0.5*dT*dT ]
-	// [ 0 0 1  0  0 0 ]
-	// [ 0 0 0  1  0 0 ]
-	// [ 0 0 0  0  1 0 ]
-	// [ 0 0 0  0  0 1 ]
+	// [ 0 1 0  dT 0 		 0.5*dT*dT ]
+	// [ 0 0 1  0  0 		 0 ]
+	// [ 0 0 0  1  0 		 0 ]
+	// [ 0 0 0  0  1 		 0 ]
+	// [ 0 0 0  0  0 		 1 ]
 	setIdentity(kf.transitionMatrix);
 
 	// Measure Matrix H
@@ -240,7 +240,7 @@ int main(int argc, char **argv)
 	/*
 	 * Refresh frequency
 	 */
-	ros::Rate loop_rate(1);
+	ros::Rate loop_rate(4);
 
 	while(ros::ok()){
 
@@ -266,12 +266,15 @@ int main(int argc, char **argv)
 		frame.copyTo(res);
 		if (found)
 		{
-			// >>>> Matrix A
+			// >>>>> Kalman prediction
+			//Matrix A
 			kf.transitionMatrix.at<float>(2) = dT;
 			kf.transitionMatrix.at<float>(9) = dT;
+
 			kf.transitionMatrix.at<float>(4) = 0.5*dT*dT;
 			kf.transitionMatrix.at<float>(11) = 0.5*dT*dT;
 			// <<<< Matrix A
+
 
 			if (view_results) cout << "dT: " << dT << endl;
 
@@ -280,7 +283,6 @@ int main(int argc, char **argv)
 			//Publish the points
 			point_msg.x = state.at<float>(0);
 			point_msg.y = state.at<float>(1);
-
 			points_pub.publish(point_msg);
 
 			//Show the prediction in the res image
@@ -290,12 +292,14 @@ int main(int argc, char **argv)
 				Rect predRect;
 				predRect.width = state.at<float>(4);
 				predRect.height = state.at<float>(5);
+				predRect.x = state.at<float>(0) - predRect.width / 2;
+         		predRect.y = state.at<float>(1) - predRect.height / 2;
+
 
 				Point center;
 				center.x = state.at<float>(0);
 				center.y = state.at<float>(1);
 				circle(res, center, 2, CV_RGB(255,0,0), -1);
-
 				rectangle(res, predRect, CV_RGB(255,0,0), 2);
 			}
 		}
@@ -317,6 +321,7 @@ int main(int argc, char **argv)
 
 			meas.at<float>(0) = ballsBox[0].x + ballsBox[0].width / 2;
 			meas.at<float>(1) = ballsBox[0].y + ballsBox[0].height / 2;
+
 
 			if (!found) // First detection!
 			{
