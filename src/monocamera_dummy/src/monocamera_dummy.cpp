@@ -20,10 +20,10 @@ int main(int argc, char** argv)
    image_transport::ImageTransport it(nh);
    image_transport::Publisher pub = it.advertise(PUBLISHER, 1);
 
-   cv::Mat imageA = cv::imread(ros::package::getPath("monocamera_dummy")+"/MarkerA.ppm");
-   cv::Mat imageB = cv::imread(ros::package::getPath("monocamera_dummy")+"/MarkerB.ppm");
-   cv::Mat imageC = cv::imread(ros::package::getPath("monocamera_dummy")+"/MarkerC.ppm");
-   cv::Mat imageD = cv::imread(ros::package::getPath("monocamera_dummy")+"/MarkerD.ppm");
+   cv::Mat imageA = cv::imread(ros::package::getPath("monocamera_dummy")+"/ownA.ppm");
+   cv::Mat imageB = cv::imread(ros::package::getPath("monocamera_dummy")+"/ownB.ppm");
+   cv::Mat imageC = cv::imread(ros::package::getPath("monocamera_dummy")+"/ownC.ppm");
+   cv::Mat imageD = cv::imread(ros::package::getPath("monocamera_dummy")+"/ownD.ppm");
 
    if(imageA.empty() || imageB.empty() || imageC.empty() || imageD.empty()){
       ROS_ERROR("no image loaded"); 

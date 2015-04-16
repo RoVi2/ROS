@@ -29,7 +29,7 @@ using namespace cv;
 #define MAX_H_BLUE 300
 // <<<<< Color to be tracked
 
-#define SUBSCRIBER "/image_raw"
+#define SUBSCRIBER "/monocamera_camera/image"
 #define TOPIC "/tracking/points"
 #define PARAM_VIEW_IMAGES "/tracking/view_images"
 #define PARAM_VIEW_RESULTS "/tracking/view_results"
@@ -112,7 +112,7 @@ vector<Rect> ballsRecognition(Mat & frame, Mat & res){
 			for (size_t i = 0; i < balls.size(); i++)
 			{
 				drawContours(res, balls, i, CV_RGB(20,150,20), 1);
-				rectangle(res, ballsBox[i], CV_RGB(0,255,0), 2);
+				rectangle(res, ballsBox[i], CV_RGB(155,255,0), 2);
 
 				Point center;
 				center.x = ballsBox[i].x + ballsBox[i].width / 2;
@@ -167,7 +167,7 @@ int main(int argc, char **argv)
 	ros::Publisher points_pub;
 
 	// Parameters
-	nh.setParam(PARAM_VIEW_IMAGES, false);
+	nh.setParam(PARAM_VIEW_IMAGES, true);
 	nh.setParam(PARAM_VIEW_RESULTS, false);
 
 	// The Mat to store the original image
@@ -183,7 +183,7 @@ int main(int argc, char **argv)
 
 	// >>>> Kalman Filter
 	int stateSize = 6;
-	int measSize = 4;
+	int measSize = 2;
 	int contrSize = 0;
 
 	unsigned int type = CV_32F;
@@ -212,8 +212,8 @@ int main(int argc, char **argv)
 	kf.measurementMatrix = Mat::zeros(measSize, stateSize, type);
 	kf.measurementMatrix.at<float>(0) = 1.0f;
 	kf.measurementMatrix.at<float>(7) = 1.0f;
-	kf.measurementMatrix.at<float>(16) = 1.0f;
-	kf.measurementMatrix.at<float>(23) = 1.0f;
+	//kf.measurementMatrix.at<float>(16) = 1.0f;
+	//kf.measurementMatrix.at<float>(23) = 1.0f;
 
 	// Process Noise Covariance Matrix Q
 	// [ Ex 0  0    0 0    0 ]
@@ -227,8 +227,8 @@ int main(int argc, char **argv)
 	kf.processNoiseCov.at<float>(7) = 1e-2;
 	kf.processNoiseCov.at<float>(14) = 2.0f;
 	kf.processNoiseCov.at<float>(21) = 1.0f;
-	kf.processNoiseCov.at<float>(28) = 3.0f;
-	kf.processNoiseCov.at<float>(35) = 3.0f;
+	kf.processNoiseCov.at<float>(28) = 1e-2;
+	kf.processNoiseCov.at<float>(35) = 1e-2;
 
 	// Measures Noise Covariance Matrix R
 	setIdentity(kf.measurementNoiseCov, Scalar(1e-1));
@@ -272,8 +272,8 @@ int main(int argc, char **argv)
 			// >>>> Matrix A
 			kf.transitionMatrix.at<float>(2) = dT;
 			kf.transitionMatrix.at<float>(9) = dT;
-			kf.transitionMatrix.at<float>(4) = 0.5*dT*dT;
-			kf.transitionMatrix.at<float>(11) = 0.5*dT*dT;
+			//kf.transitionMatrix.at<float>(4) = 0.5*dT*dT;
+			//kf.transitionMatrix.at<float>(11) = 0.5*dT*dT;
 			// <<<< Matrix A
 
 			if (view_results) cout << "dT: " << dT << endl;
