@@ -22,7 +22,7 @@ using namespace cv;
 #define SUBSCRIBER "/tracking/points"
 #define TOPIC "/kalman_filter/points"
 
-geometry_msgs::Point_<float> point_original;
+geometry_msgs::Point point_original;
 #define VIEW_RESULTS 1
 #define KALMAN_RESET_WINDOW 10
 

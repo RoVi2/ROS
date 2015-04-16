@@ -29,6 +29,7 @@ using namespace cv;
 #define MAX_H_BLUE 300
 // <<<<< Color to be tracked
 
+//#define SUBSCRIBER "/monocamera_camera/image"
 #define SUBSCRIBER "/image_raw"
 #define TOPIC "/tracking/points"
 #define PARAM_VIEW_IMAGES "/tracking/view_images"
@@ -112,7 +113,7 @@ vector<Rect> ballsRecognition(Mat & frame, Mat & res){
 			for (size_t i = 0; i < balls.size(); i++)
 			{
 				drawContours(res, balls, i, CV_RGB(20,150,20), 1);
-				rectangle(res, ballsBox[i], CV_RGB(0,255,0), 2);
+				rectangle(res, ballsBox[i], CV_RGB(155,255,0), 2);
 
 				Point center;
 				center.x = ballsBox[i].x + ballsBox[i].width / 2;
@@ -183,7 +184,7 @@ int main(int argc, char **argv)
 
 	// >>>> Kalman Filter
 	int stateSize = 6;
-	int measSize = 4;
+	int measSize = 2;
 	int contrSize = 0;
 
 	unsigned int type = CV_32F;
@@ -207,26 +208,22 @@ int main(int argc, char **argv)
 	// Measure Matrix H
 	// [ 1 0 0 0 0 0 ]
 	// [ 0 1 0 0 0 0 ]
-	// [ 0 0 0 0 1 0 ]
-	// [ 0 0 0 0 0 1 ]
 	kf.measurementMatrix = Mat::zeros(measSize, stateSize, type);
 	kf.measurementMatrix.at<float>(0) = 1.0f;
 	kf.measurementMatrix.at<float>(7) = 1.0f;
-	kf.measurementMatrix.at<float>(16) = 1.0f;
-	kf.measurementMatrix.at<float>(23) = 1.0f;
 
 	// Process Noise Covariance Matrix Q
-	// [ Ex 0  0    0 0    0 ]
-	// [ 0  Ey 0    0 0    0 ]
-	// [ 0  0  Ev_x 0 0    0 ]
-	// [ 0  0  0    Ev_y 0 0 ]
-	// [ 0  0  0    0 Ea_x 0 ]
-	// [ 0  0  0    0 0 Ea_y ]
+	// [ Ex 0  0    0 	 0    	0 ]
+	// [ 0  Ey 0    0 	 0    	0 ]
+	// [ 0  0  Ev_x 0 	 0   	0 ]
+	// [ 0  0  0    Ev_y 0 		0 ]
+	// [ 0  0  0    0	 Ea_x 	0 ]
+	// [ 0  0  0    0 	 0 		Ea_y ]
 	//setIdentity(kf.processNoiseCov, Scalar(1e-2));
 	kf.processNoiseCov.at<float>(0) = 1e-2;
 	kf.processNoiseCov.at<float>(7) = 1e-2;
 	kf.processNoiseCov.at<float>(14) = 2.0f;
-	kf.processNoiseCov.at<float>(21) = 1.0f;
+	kf.processNoiseCov.at<float>(21) = 2.0f;
 	kf.processNoiseCov.at<float>(28) = 3.0f;
 	kf.processNoiseCov.at<float>(35) = 3.0f;
 
@@ -295,8 +292,6 @@ int main(int argc, char **argv)
 				Rect predRect;
 				predRect.width = state.at<float>(4);
 				predRect.height = state.at<float>(5);
-				predRect.x = state.at<float>(0) - predRect.width / 2;
-				predRect.y = state.at<float>(1) - predRect.height / 2;
 
 				Point center;
 				center.x = state.at<float>(0);
@@ -324,20 +319,23 @@ int main(int argc, char **argv)
 
 			meas.at<float>(0) = ballsBox[0].x + ballsBox[0].width / 2;
 			meas.at<float>(1) = ballsBox[0].y + ballsBox[0].height / 2;
+			//meas.at<float>(2) = (float)ballsBox[0].width;
+			//meas.at<float>(3) = (float)ballsBox[0].height;
 
 
 			if (!found) // First detection!
 			{
-				//setIdentity(kf.errorCovPre, 1);
-				kf.errorCovPre.at<float>(0) = 1; // px
-				kf.errorCovPre.at<float>(7) = 1; // px
-				kf.errorCovPre.at<float>(14) = 1;
-				kf.errorCovPre.at<float>(21) = 1;
-				kf.errorCovPre.at<float>(28) = 1; // px
-				kf.errorCovPre.at<float>(35) = 1; // px
+				//Reset Error Covariance Prediction Matrix
+				setIdentity(kf.errorCovPre, 1);
 
+				//Update the state with the measures
 				state.at<float>(0) = meas.at<float>(0);
 				state.at<float>(1) = meas.at<float>(1);
+				state.at<float>(2) = 0;
+				state.at<float>(3) = 0;
+				state.at<float>(4) = 0;
+				state.at<float>(5) = 0;
+
 
 				found = true;
 			}
