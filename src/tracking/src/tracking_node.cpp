@@ -321,8 +321,6 @@ int main(int argc, char **argv)
 
 			meas.at<float>(0) = ballsBox[0].x + ballsBox[0].width / 2;
 			meas.at<float>(1) = ballsBox[0].y + ballsBox[0].height / 2;
-			//meas.at<float>(2) = (float)ballsBox[0].width;
-			//meas.at<float>(3) = (float)ballsBox[0].height;
 
 
 			if (!found) // First detection!
