@@ -34,7 +34,7 @@ using namespace cv;
 #define SUBSCRIBER_CAMERA_2 "/image_raw"
 #define TOPIC "/balltracker/point"
 #define PARAM_DEBUGGING "/balltracker/debugging"
-#define CAMERAS_CALIBRATION_PATH "/jijiji/calibration.txt"
+#define CAMERAS_CALIBRATION_PATH "/home/moro/Apuntes/ROVI/ROS/res/ost.txt"
 
 
 //----------------------------------------------------------------
@@ -135,6 +135,7 @@ private:
 
 	void loadCamFromStream(std::istream & input, Camera &cam);
 	void readStereoCameraFile(const std::string & fileNameP, StereoPair &stereoPair);
+    void jumpLines(std::istream & input, int number);
 	geometry_msgs::Point stereopsis(cv::Point & tracked_point);
 
 	/**
@@ -219,6 +220,18 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata) {
 	}
 }
 
+/**
+ * Jumps lines from a text file
+ * @param input File being read
+ * @param number Number of lines to jump
+ */
+ void SyncedImages::jumpLines(std::istream & input, int number){
+    string line;
+    for(int i=0; i<number; i++){
+        getline(input, line);
+    }
+ }
+
 
 /**
  * Reads a calibration file with the calibration parameters of a camera.
@@ -229,43 +242,73 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata) {
  */
 void SyncedImages::loadCamFromStream(std::istream & input, Camera &cam) {
 	Mat intrinsic = Mat::zeros(3, 3, CV_64F);
-	Mat distortion = Mat::zeros(4, 1, CV_64F);
-	Mat projection = Mat::zeros(4, 4, CV_64F);
-	Mat transformation = Mat::eye(4, 4, CV_64F);
-	Mat translation = Mat::zeros(3, 1, CV_64F);
-	Mat rotation = Mat::zeros(3, 3, CV_64F);
+	Mat distortion = Mat::zeros(5, 1, CV_64F);
+    Mat rectification = Mat::zeros(3, 3, CV_64F);
+	Mat projection = Mat::zeros(3, 4, CV_64F);
+    Mat transformation = Mat::eye(4, 4, CV_64F);
+    Mat translation = Mat::zeros(3, 1, CV_64F);
+    Mat rotation = Mat::zeros(3, 3, CV_64F);
 	double image_width, image_height;
 	input.precision(20);
-	input >> image_width >> image_height;
 
+    jumpLines(input, 6);
+    input >> image_width;
+    jumpLines(input, 3);
+    input >> image_height;
+
+    jumpLines(input, 5);
 	input >> intrinsic.at<double>(0, 0) >> intrinsic.at<double>(0, 1)
-					>> intrinsic.at<double>(0, 2);
+            >> intrinsic.at<double>(0, 2);
 	input >> intrinsic.at<double>(1, 0) >> intrinsic.at<double>(1, 1)
-					>> intrinsic.at<double>(1, 2);
+            >> intrinsic.at<double>(1, 2);
 	input >> intrinsic.at<double>(2, 0) >> intrinsic.at<double>(2, 1)
-					>> intrinsic.at<double>(2, 2);
+            >> intrinsic.at<double>(2, 2);
 
+    jumpLines(input, 3);
 	input >> distortion.at<double>(0, 0) >> distortion.at<double>(1, 0)
-					>> distortion.at<double>(2, 0) >> distortion.at<double>(3, 0);
+			>> distortion.at<double>(2, 0) >> distortion.at<double>(3, 0) 
+            >> distortion.at<double>(4,0);
 
-	input >> rotation.at<double>(0, 0) >> rotation.at<double>(0, 1)
-					>> rotation.at<double>(0, 2);
-	input >> rotation.at<double>(1, 0) >> rotation.at<double>(1, 1)
-					>> rotation.at<double>(1, 2);
-	input >> rotation.at<double>(2, 0) >> rotation.at<double>(2, 1)
-					>> rotation.at<double>(2, 2);
-	input >> translation.at<double>(0) >> translation.at<double>(1)
-					>> translation.at<double>(2);
+    jumpLines(input, 3);
+    input >> rectification.at<double>(0,0) >> rectification.at<double>(0,1) 
+            >> rectification.at<double>(0,2);
+    input >> rectification.at<double>(1,0) >> rectification.at<double>(1,1) 
+            >> rectification.at<double>(1,2);
+    input >> rectification.at<double>(2,0) >> rectification.at<double>(2,1) 
+            >> rectification.at<double>(2,2);
 
-	hconcat(rotation, translation, transformation);
-	Mat row = Mat::zeros(1, 4, CV_64F);
-	row.at<double>(0, 3) = 1;
-	transformation.push_back(row);
+    jumpLines(input, 3);
+    input >> projection.at<double>(0,0) >> projection.at<double>(0,1)
+            >> projection.at<double>(0,2) >> projection.at<double>(0,3);
+    input >> projection.at<double>(1,0) >> projection.at<double>(1,1)
+            >> projection.at<double>(1,2) >> projection.at<double>(1,3);
+    input >> projection.at<double>(2,0) >> projection.at<double>(2,1)
+            >> projection.at<double>(2,2) >> projection.at<double>(2,3);
 
-	Mat tmp = intrinsic;
-	Mat tmp1 = Mat::zeros(3, 1, CV_64F);
-	hconcat(tmp, tmp1, tmp);
-	projection = tmp * transformation;
+    jumpLines(input, 1);
+	
+    cout << image_height << image_width << endl;
+    cout << intrinsic << endl;
+    cout << distortion << endl;
+    cout << rectification << endl;
+    cout << projection << endl;
+
+    transformation = intrinsic.inv()*projection;
+    for(int i=0; i<3; i++){
+        for(int j=0; j<4; j++){
+            if(j!=3){
+                rotation.at<double>(i,j)=transformation.at<double>(i,j);
+            }
+            else{
+                translation.at<double>(i,0)=transformation.at<double>(i,j);
+            }
+        }
+    }
+
+    cout << transformation << endl;
+    cout << rotation << endl;
+    cout << translation << endl;
+	
 
 	cam.distortion = distortion;
 	cam.intrinsic = intrinsic;
@@ -285,18 +328,15 @@ void SyncedImages::loadCamFromStream(std::istream & input, Camera &cam) {
  * @return If the read was correctly done
  */
 void SyncedImages::readStereoCameraFile(const std::string & fileNameP, StereoPair &stereoPair) {
-	int number_of_cameras;
 	Camera cam1, cam2;
 	std::ifstream ifs(fileNameP.c_str());
 	if (ifs) {
-		ifs >> number_of_cameras;
-		if (number_of_cameras == 2) {
-			loadCamFromStream(ifs, cam1);
-			loadCamFromStream(ifs, cam2);
-			stereoPair.cam1 = cam1;
-			stereoPair.cam2 = cam2;
-		}
-	_camerasCalibrated = true;
+		loadCamFromStream(ifs, cam1);
+        jumpLines(ifs, 1);
+		loadCamFromStream(ifs, cam2);
+		stereoPair.cam1 = cam1;
+		stereoPair.cam2 = cam2;
+        _camerasCalibrated = true;
 	}
 	else{
 		cout << "Calibration file found not found" << endl;
@@ -507,9 +547,9 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 						<< std::endl;
 
 	geometry_msgs::Point point_geo_msg;
-	point_geo_msg.x = (pnts3D / pnts3D.at<double>(3, 0)).row(0);
-	point_geo_msg.y = (pnts3D / pnts3D.at<double>(3, 0)).row(1);
-	point_geo_msg.z = (pnts3D / pnts3D.at<double>(3, 0)).row(2);
+	//point_geo_msg.x = (pnts3D / pnts3D.at<double>(3, 0)).row(0);
+	//point_geo_msg.y = (pnts3D / pnts3D.at<double>(3, 0)).row(1);
+	//point_geo_msg.z = (pnts3D / pnts3D.at<double>(3, 0)).row(2);
 
 	return point_geo_msg;
 }
