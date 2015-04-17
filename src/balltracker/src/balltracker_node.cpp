@@ -33,7 +33,8 @@ using namespace cv;
 #define SUBSCRIBER_CAMERA_1 "/image_raw"
 #define SUBSCRIBER_CAMERA_2 "/image_raw"
 #define TOPIC "/balltracker/point"
-#define PARAM_DEBUGGING "/balltracker/debugging"
+#define PARAM_VIEW_MESSAGES "/balltracker/view_messages"
+#define PARAM_VIEW_IMAGES "/balltracker/view_images"
 #define CAMERAS_CALIBRATION_PATH "/jijiji/calibration.txt"
 
 
@@ -55,7 +56,12 @@ public:
 , _rightImgSub(_it, SUBSCRIBER_CAMERA_2, 1)
 , _sync(policy_type(1), _leftImgSub, _rightImgSub)
 , _updated(false)
+, _view_images(false)
+, _view_messages(false)
 {
+		//ROS Parameters
+		_nh.setParam(PARAM_VIEW_MESSAGES, false);
+		_nh.setParam(PARAM_VIEW_IMAGES, false);
 		//Publisher
 		_point_pub = _nh.advertise<geometry_msgs::Point>(TOPIC, 1);
 		//Calibrate the cameras from the file
@@ -71,19 +77,23 @@ public:
 
 	bool images(cv::Mat &imgLeft, cv::Mat &imgRight)
 	{
-		if (_lock.test_and_set(std::memory_order_acquire))
+		if (_lock.test_and_set(memory_order_acquire))
 			return false;
 
 		_imgLeft.copyTo(imgLeft);
 		_imgRight.copyTo(imgRight);
 		_updated = false;
-		_lock.clear(std::memory_order_release);
+		_lock.clear(memory_order_release);
 		return true;
 	}
 
 private:
 	//Typedef
 	typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> policy_type;
+
+	//Debugging
+	bool _view_messages;
+	bool _view_images;
 
 	//ROS
 	ros::NodeHandle _nh;
@@ -95,9 +105,11 @@ private:
 
 	//Image Sync
 	bool _updated;
-	std::atomic_flag _lock{ATOMIC_FLAG_INIT};
+	atomic_flag _lock{ATOMIC_FLAG_INIT};
 
-	//Steropsis
+	/*
+	 * 3D point calculation
+	 */
 	/**
 	 * Struct that defines a camera
 	 */
@@ -133,20 +145,30 @@ private:
 
 	StereoPair _stereoCam;
 
-	void loadCamFromStream(std::istream & input, Camera &cam);
-	void readStereoCameraFile(const std::string & fileNameP, StereoPair &stereoPair);
+	void loadCamFromStream(istream & input, Camera &cam);
+	void readStereoCameraFile(const string & fileNameP, StereoPair &stereoPair);
 	geometry_msgs::Point stereopsis(cv::Point & tracked_point);
+	geometry_msgs::Point triangulationOpenCV(cv::Point & tracked_point_left, cv::Point & tracked_point_right);
+
+	/*
+	 * Feature Extraction
+	 */
+	cv::Point findFeatureBasedOnLine(Mat & image, Mat & epipolar);
 
 	/**
 	 * Callback that read the ROS images messages, transform them to OpenCV images and
-	 * call the feature extraction and triangulation funtions
+	 * call the feature extraction and triangulation functions
 	 * @param msgLeft
 	 * @param msgRight
 	 */
 	void callback(sensor_msgs::ImageConstPtr const &msgLeft, sensor_msgs::ImageConstPtr const &msgRight)
 	{
+		//Check if the creator wants to know that the hell is going on
+		ros::param::get(PARAM_VIEW_MESSAGES, _view_messages);
+		ros::param::get(PARAM_VIEW_IMAGES, _view_images);
+
 		// If currently locked, we disregard this update.
-		if (_lock.test_and_set(std::memory_order_acquire))
+		if (_lock.test_and_set(memory_order_acquire))
 			return;
 
 		//Receive images
@@ -154,18 +176,25 @@ private:
 		_imgRight = cv_bridge::toCvCopy(msgRight, sensor_msgs::image_encodings::BGR8)->image;
 
 		//Tracking
-		cv::Point tracked_point;
-		//findBall(_imgLeft);
+		cv::Point tracked_point_left;
+		cv::Point tracked_point_right;
+		//tracked_point_left = findBall(_imgLeft);
+		//tracked_point_right = findBall(_imgRight);
 
+
+		//Calculate 3D
+		geometry_msgs::Point point3d;
 		//Stereopsis
-		geometry_msgs::Point point3d = stereopsis(tracked_point);
+		point3d = stereopsis(tracked_point_left);
+		//Matching
+		//point3d = matching(tracked_point_left, tracked_point_right);
 
 		//Publish
 		_point_pub.publish(point3d);
 
 		//Sync
 		_updated = true;
-		_lock.clear(std::memory_order_release);
+		_lock.clear(memory_order_release);
 	}
 };
 
@@ -187,7 +216,7 @@ cv::Point findBall(cv::Mat const &img)
 	cv::GaussianBlur(gray, gray, cv::Size(9, 9), 2, 2);
 
 	// Find circles using Hough transform
-	std::vector<cv::Vec3f> circles;
+	vector<cv::Vec3f> circles;
 	cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT, 2, (gray.rows + gray.cols) / 8, 200, 200);
 
 	if (circles.empty()) {
@@ -201,25 +230,27 @@ cv::Point findBall(cv::Mat const &img)
 	}
 }
 
+/**
+ * Find the center of the tracked image based on the epipolar of the other image
+ * @param image The image to obtain the feature from
+ * @param epipolar The epipolar from the other image
+ * @return The center of the tracked object
+ */
+cv::Point SyncedImages::findFeatureBasedOnLine(Mat & image, Mat & epipolar){
+	cv::Point point_center;
+
+	/*
+	 * To be implemented
+	 */
+
+	return point_center;
+}
+
 
 
 //----------------------------------------------------------------
 //						Triangulation
 //----------------------------------------------------------------
-double tmp_x, tmp_y;
-/*
- * Callback event for detecting mouse-click on images
- */
-void CallBackFunc(int event, int x, int y, int flags, void* userdata) {
-	if (event == cv::EVENT_LBUTTONDOWN) {
-		std::cout << "\nLeft button of the mouse is clicked - position (" << x
-				<< ", " << y << ")\n" << std::endl;
-		tmp_x = x;
-		tmp_y = y;
-	}
-}
-
-
 /**
  * Reads a calibration file with the calibration parameters of a camera.
  * These are: Intrinsic, Distortion, Transformation, Projection parameters from the camera
@@ -227,7 +258,7 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata) {
  * @param input The file
  * @param cam The camera to store the parameters in
  */
-void SyncedImages::loadCamFromStream(std::istream & input, Camera &cam) {
+void SyncedImages::loadCamFromStream(istream & input, Camera &cam) {
 	Mat intrinsic = Mat::zeros(3, 3, CV_64F);
 	Mat distortion = Mat::zeros(4, 1, CV_64F);
 	Mat projection = Mat::zeros(4, 4, CV_64F);
@@ -235,6 +266,7 @@ void SyncedImages::loadCamFromStream(std::istream & input, Camera &cam) {
 	Mat translation = Mat::zeros(3, 1, CV_64F);
 	Mat rotation = Mat::zeros(3, 3, CV_64F);
 	double image_width, image_height;
+
 	input.precision(20);
 	input >> image_width >> image_height;
 
@@ -284,10 +316,10 @@ void SyncedImages::loadCamFromStream(std::istream & input, Camera &cam) {
  * @param stereoPair Where parameters are stored in
  * @return If the read was correctly done
  */
-void SyncedImages::readStereoCameraFile(const std::string & fileNameP, StereoPair &stereoPair) {
+void SyncedImages::readStereoCameraFile(const string & fileNameP, StereoPair &stereoPair) {
 	int number_of_cameras;
 	Camera cam1, cam2;
-	std::ifstream ifs(fileNameP.c_str());
+	ifstream ifs(fileNameP.c_str());
 	if (ifs) {
 		ifs >> number_of_cameras;
 		if (number_of_cameras == 2) {
@@ -299,32 +331,60 @@ void SyncedImages::readStereoCameraFile(const std::string & fileNameP, StereoPai
 	_camerasCalibrated = true;
 	}
 	else{
-		cout << "Calibration file found not found" << endl;
+		ROS_WARN("Calibration file found not found");
 	}
 }
 
 
+/**
+ * OpenCV triangulation function using Projection matrices and two corresponding points
+ * @param tracked_point_left The point in the left image
+ * @param tracked_point_right The point in the right image
+ * @return The 3D point
+ */
+geometry_msgs::Point SyncedImages::triangulationOpenCV(cv::Point & tracked_point_left, cv::Point & tracked_point_right){
+	//Correct format for the function
+	cv::Mat pnts3D(1, 1, CV_64FC4);
+	cv::Mat cam0pnts(1, 1, CV_64FC2);
+	cv::Mat cam1pnts(1, 1, CV_64FC2);
+	cam0pnts.at<Vec2d>(0)[0] = tracked_point_left.x;
+	cam0pnts.at<Vec2d>(0)[1] = tracked_point_left.y;
+	cam1pnts.at<Vec2d>(0)[0] = tracked_point_right.x;
+	cam1pnts.at<Vec2d>(0)[1] = tracked_point_right.y;
+	//Triangulate
+	cv::triangulatePoints(_stereoCam.cam1.projection, _stereoCam.cam2.projection,
+			cam0pnts, cam1pnts, pnts3D);
+	//Some message for make life easier
+	if (_view_messages) cout << endl << "OpenCV triangulation" << endl << "Image points: " << cam0pnts << "\t"
+			<< cam1pnts << endl << "Triangulated point: " << pnts3D << endl;
+	if (_view_messages) cout << "Normalized: " << pnts3D / pnts3D.at<double>(3, 0) << endl;
 
+	//Normalize the point
+	geometry_msgs::Point point_geo_msg;
+	point_geo_msg.x = pnts3D.at<double>(0,0) / pnts3D.at<double>(3,0);
+	point_geo_msg.y = pnts3D.at<double>(1,0) / pnts3D.at<double>(3,0);
+	point_geo_msg.z = pnts3D.at<double>(2,0) / pnts3D.at<double>(3,0);
+
+	return point_geo_msg;
+}
+
+/**
+ * Calculate the 3D point based on steropsis
+ * @param tracked_point The point of one of the images
+ * @return The 3D point
+ */
 geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
-	// The program takes 3 arguments
-	// calibration file in the old opencv format .txt
-	// image1
-	// image2
-
 	//Copy the images
 	Mat img_1, img_2;
 	img_1 = _imgLeft;
 	img_2 = _imgRight;
 
-	//Print out the data loaded from the calibration file
-	_stereoCam.cam1.printData();
-	_stereoCam.cam2.printData();
+	if (_view_messages) {
+		cout << "ProjectionMatrixLeft:" << endl <<_stereoCam.cam1.projection<<endl << endl;
+		cout << "ProjectionMatrixRight:" << endl <<_stereoCam.cam2.projection<<endl;
+	}
 
-	std::cout<<"ProjectionMatrixLeft:\n"<<_stereoCam.cam1.projection<<std::endl;
-	std::cout<<"\nProjectionMatrixRight:\n"<<_stereoCam.cam2.projection<<std::endl;
-
-
-	//Take out the translation and rotation part from the Projection matrices
+	//Take out the translation and rotation part from the projection matrices
 	Mat Pxr = _stereoCam.cam2.projection(Range(0, 3), Range(0, 3));
 	Mat pxr = _stereoCam.cam2.projection(Range(0, 3), Range(3, 4));
 
@@ -332,21 +392,21 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 	Mat pxl = _stereoCam.cam1.projection(Range(0, 3), Range(3, 4));
 
 
-	//Compute the optical centers ( for convenience we use the inv(DECOMP_SVD)
+	//Compute the optical centers. For convenience we use the inv(DECOMP_SVD)
 	Mat Cr = -1.0 * Pxr.inv(DECOMP_SVD) * pxr;
 	Mat tmpone = Mat::ones(1, 1, CV_64F);
 	Cr.push_back(tmpone);
 	Mat Cl = -1.0 * Pxl.inv(DECOMP_SVD) * pxl;
 	Cl.push_back(tmpone);
 
-	cout << "\nOptical centerLeft: " << Cl << "\nOptical centerRight" << Cr << endl;
+	if (_view_messages) cout << "\nOptical centerLeft: " << Cl << "\nOptical centerRight" << Cr << endl;
 
-	// Compute the epipoles
+	//Compute the epipoles
 	Mat el = _stereoCam.cam1.projection * Cr;
 	Mat er = _stereoCam.cam2.projection * Cl;
-	cout << "\nEpipoles:\n" << el << "\n" << er << endl;
+	if (_view_messages) cout << endl << "Epipoles:" << endl << el << endl << er << endl;
 
-	// Create symmetric skew matrix from right epipole
+	//Create symmetric skew matrix from right epipole
 	Mat erx = Mat::zeros(3, 3, CV_64F);
 	erx.at<double>(0, 1) = -er.at<double>(2);
 	erx.at<double>(0, 2) = er.at<double>(1);
@@ -354,27 +414,24 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 	erx.at<double>(1, 2) = -er.at<double>(0);
 	erx.at<double>(2, 0) = -er.at<double>(1);
 	erx.at<double>(2, 1) = er.at<double>(0);
-	std::cout << "\nSymmetric skew matrix:\n " << erx << "\n" << endl;
+	if (_view_messages) cout << endl << "Symmetric skew matrix:" << endl << erx << endl << endl;
 
-	// Compute fundamental matrix left to right
+	//Compute fundamental matrix left to right
 	Mat Flr = erx * _stereoCam.cam2.projection * _stereoCam.cam1.projection.inv(DECOMP_SVD);
 
-	cout << "\nFundamental matrix left to right:\n" << Flr << "\n" << std::endl;
+	if (_view_messages) cout << endl << "Fundamental matrix left to right:" << endl << Flr << endl << endl;
 
-	std::vector<cv::Vec3f> lines2;
-
-	double x_left, y_left, x_right, y_right;
-
-
+	vector<cv::Vec3f> lines2;
 	/*
 	 *
 	 *
-	 * CHECK ABOVE HERE!!
-	 *
-	 *
+	 * Above here should be only calculated once...
 	 *
 	 *
 	 */
+	double x_left, y_left, x_right, y_right;
+
+
 
 	x_left = tracked_point.x;
 	y_left = tracked_point.y;
@@ -389,61 +446,60 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 	cv::Mat M1inf = Pxl.inv(DECOMP_SVD) * m1;
 	Mat tmpZer = Mat::zeros(1, 1, CV_64F);
 	M1inf.push_back(tmpZer);
-	std::cout << "M1inf: " << M1inf << std::endl;
+	if (_view_messages) cout << "M1inf: " << M1inf << endl;
 
 	//compute the projection of Minf_1 in image 2
 	cv::Mat mr = _stereoCam.cam2.projection * M1inf;
 	//Normalize to image plane
 	cv::Mat mrN = mr / mr.at<double>(2, 0);
 
-	std::cout << "Projection of point of infinity from image 1 into image 2:\n"
-			<< mrN << std::endl;
+	if (_view_messages) cout << "Projection of point of infinity from image 1 into image 2:" << endl << mrN << endl;
 
 	//Normalize the epipole for image 2
 	cv::Mat erN = er / er.at<double>(2, 0);
 
-	cv::Point p1, p2;
+	if (_view_images) {
+		//Check if epipole is in the image else we use the line equation to find the point of intersection
+		//with the image plane, workaround of the the close to zero division we end up in, when using rectified images
+		cv::Point p1, p2;
+		if (mrN.at<double>(0, 0) > 0 && mrN.at<double>(0, 0) < 640) {
+			p1.x = erN.at<double>(0, 0);
+			p1.y = erN.at<double>(1, 0);
+		} else {
+			double deltaA = (erN.at<double>(1, 0) - mrN.at<double>(1, 0))
+									/ (erN.at<double>(0, 0) - mrN.at<double>(0, 0));
+			double b = mrN.at<double>(1, 0) - deltaA * mrN.at<double>(0, 0);
+			p1.x = 0;
+			p1.y = b;
+		}
 
-	// Check if epipole is in the image else we use the line equation to find the point of intersection
-	// with the image plane, workaround of the the close to zero division we end up in, when using rectified images
-	if (mrN.at<double>(0, 0) > 0 && mrN.at<double>(0, 0) < 640) {
-		p1.x = erN.at<double>(0, 0);
-		p1.y = erN.at<double>(1, 0);
-	} else {
-		double deltaA = (erN.at<double>(1, 0) - mrN.at<double>(1, 0))
-							/ (erN.at<double>(0, 0) - mrN.at<double>(0, 0));
-		double b = mrN.at<double>(1, 0) - deltaA * mrN.at<double>(0, 0);
-		p1.x = 0;
-		p1.y = b;
+		p2.x = mr.at<double>(0, 0);
+		p2.y = mr.at<double>(1, 0);
+
+		// Draw epipolar line in image 2 from point to point, green line
+		cv::line(img_2, p1, p2, Scalar(0, 255, 0), 2, CV_AA);
+
+		// Alternatively one can utilize fundamental matrix to compute epipolar lines,
+		// here we use an OpenCV function, the epipolar line is shown in red
+		vector<cv::Vec3f> lines;
+		vector<cv::Point2f> points;
+		points.push_back(cv::Point2f(x_left, y_left));
+		cv::computeCorrespondEpilines(points, 1, Flr, lines);
+		for (vector<cv::Vec3f>::const_iterator it = lines.begin();
+				it != lines.end(); ++it) {
+			cv::line(img_2, cv::Point(0, -(*it)[2] / (*it)[1]),
+					cv::Point(img_2.cols,
+							-((*it)[2] + (*it)[0] * img_2.cols) / (*it)[1]),
+							cv::Scalar(0, 0, 255), 2, CV_AA	);
+		}
 	}
 
-	p2.x = mr.at<double>(0, 0);
-	p2.y = mr.at<double>(1, 0);
-
-	// Draw epipolar line in image 2 from point to point, green line
-	cv::line(img_2, p1, p2, Scalar(0, 255, 0), 2, CV_AA);
-
-	// Alternatively one can utilize fundamental matrix to compute epipolar lines, here we use an
-	// OpenCV function, the epipolar line is shown in red
-
-	std::vector<cv::Vec3f> lines;
-	std::vector<cv::Point2f> points;
-	points.push_back(cv::Point2f(x_left, y_left));
-	cv::computeCorrespondEpilines(points, 1, Flr, lines);
-	for (vector<cv::Vec3f>::const_iterator it = lines.begin();
-			it != lines.end(); ++it) {
-		cv::line(img_2, cv::Point(0, -(*it)[2] / (*it)[1]),
-				cv::Point(img_2.cols,
-						-((*it)[2] + (*it)[0] * img_2.cols) / (*it)[1]),
-						cv::Scalar(0, 0, 255), 2, CV_AA	);
-	}
-
-	imshow("Image2", img_2);
-	setMouseCallback("Image2", CallBackFunc, NULL);
-	waitKey(0);
-
-	x_right = tmp_x;
-	y_right = tmp_y;
+	/*
+	 * Calculate Point in Image 2
+	 */
+	cv::Point point_right = findFeatureBasedOnLine(_imgRight, erN);
+	x_right = tracked_point.x;
+	y_right = tracked_point.y;
 
 	// Put the chosen point into matrix and add the a 1 to the end
 	cv::Mat m_r(3, 1, CV_64F);
@@ -460,12 +516,12 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 	// Compute the point of infinity for the second image and compute Plucker line parameters
 	cv::Mat M2inf = Pxr.inv(DECOMP_SVD) * m_r;
 
-	std::cout << "Point of infinity image2: " << M2inf << std::endl;
+	if (_view_messages) cout << "Point of infinity image2: " << M2inf << endl;
 	Mat mu2 = Cr(Range(0, 3), Range(0, 1)).cross(M2inf) / cv::norm(M2inf);
 	Mat v2 = M2inf / cv::norm(M2inf);
 
-	std::cout << "\nPlucker line parameters:\nmu1: " << mu1 << "\nv1: " << v1
-			<< "\nmu2: " << mu2 << "\nv2: " << v2 << std::endl;
+	if (_view_messages) cout << "\nPlucker line parameters:\nmu1: " << mu1 << "\nv1: " << v1
+			<< "\nmu2: " << mu2 << "\nv2: " << v2 << endl;
 
 	// Some intermediate steps to utilize OpenCV matrix manipulations
 	Mat v2mu2T, v2mu1T, v1mu1T, v1mu2T;
@@ -483,33 +539,17 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 	Mat M2 = (v2 * v1mu1T - (v2 * v1T) * v2 * v1mu2T)
 						/ pow(cv::norm(v2.cross(v1)), 2) * v2 + v2.cross(mu1);
 
-	std::cout << "\nClosest point on the two lines\nM1: " << M1 << std::endl;
-	std::cout << "M2: " << M2 << std::endl;
+	cout << "\nClosest point on the two lines\nM1: " << M1 << endl;
+	cout << "M2: " << M2 << endl;
 
 	// Compute average point
 	Mat avgM = M1 + (M2 - M1) / 2;
-	std::cout << "\nAverage point: " << avgM << std::endl;
-
-	// OpenCV triangulation function using Projection matrices and two corresponding points
-	cv::Mat pnts3D(1, 1, CV_64FC4);
-	cv::Mat cam0pnts(1, 1, CV_64FC2);
-	cv::Mat cam1pnts(1, 1, CV_64FC2);
-	cam0pnts.at<Vec2d>(0)[0] = x_left;
-	cam0pnts.at<Vec2d>(0)[1] = y_left;
-	cam1pnts.at<Vec2d>(0)[0] = x_right;
-	cam1pnts.at<Vec2d>(0)[1] = y_right;
-	cv::triangulatePoints(_stereoCam.cam1.projection, _stereoCam.cam2.projection,
-			cam0pnts, cam1pnts, pnts3D);
-	std::cout << "\nOpenCV triangulation\nImage points: " << cam0pnts << "\t"
-			<< cam1pnts << "\nTriangulated point: " << pnts3D << std::endl;
-
-	std::cout << "Normalized: " << pnts3D / pnts3D.at<double>(3, 0)
-						<< std::endl;
+	cout << "\nAverage point: " << avgM << endl;
 
 	geometry_msgs::Point point_geo_msg;
-	point_geo_msg.x = (pnts3D / pnts3D.at<double>(3, 0)).row(0);
-	point_geo_msg.y = (pnts3D / pnts3D.at<double>(3, 0)).row(1);
-	point_geo_msg.z = (pnts3D / pnts3D.at<double>(3, 0)).row(2);
+	point_geo_msg.x = avgM.at<double>(0,0) / avgM.at<double>(3,0);
+	point_geo_msg.y = avgM.at<double>(1,0) / avgM.at<double>(3,0);
+	point_geo_msg.z = avgM.at<double>(2,0) / avgM.at<double>(3,0);
 
 	return point_geo_msg;
 }
