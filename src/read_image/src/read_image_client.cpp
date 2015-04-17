@@ -20,7 +20,7 @@ public:
   ImageConverter()
     : it_(nh_)
   {
-    // Subscrive to input video feed and publish output video feed
+    // Subscribe to input video feed and publish output video feed
     image_sub_left_ = it_.subscribe("/stereo_camera/left/image_raw", 1, 
       &ImageConverter::imageCb_left, this);
     image_sub_right_ = it_.subscribe("/stereo_camera/right/image_raw", 1, &ImageConverter::imageCb_right, this);
