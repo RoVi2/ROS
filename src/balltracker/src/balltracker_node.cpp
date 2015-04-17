@@ -154,13 +154,14 @@ private:
 		_imgRight = cv_bridge::toCvCopy(msgRight, sensor_msgs::image_encodings::BGR8)->image;
 
 		//Tracking
+		cv::Point tracked_point;
 		//findBall(_imgLeft);
 
 		//Stereopsis
-		geometry_msgs::Point point3d = stereopsis();
+		geometry_msgs::Point point3d = stereopsis(tracked_point);
 
 		//Publish
-		_point_pub.Publisher(point3d);
+		_point_pub.publish(point3d);
 
 		//Sync
 		_updated = true;
@@ -506,9 +507,9 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 						<< std::endl;
 
 	geometry_msgs::Point point_geo_msg;
-	point_geo_msg.x = pnts3D(0) / pnts3D.at<double>(3, 0);
-	point_geo_msg.y = pnts3D(1) / pnts3D.at<double>(3, 0);
-	point_geo_msg.z = pnts3D(2) / pnts3D.at<double>(3, 0);
+	point_geo_msg.x = (pnts3D / pnts3D.at<double>(3, 0)).row(0);
+	point_geo_msg.y = (pnts3D / pnts3D.at<double>(3, 0)).row(1);
+	point_geo_msg.z = (pnts3D / pnts3D.at<double>(3, 0)).row(2);
 
 	return point_geo_msg;
 }
