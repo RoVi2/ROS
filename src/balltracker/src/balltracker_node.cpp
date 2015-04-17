@@ -35,7 +35,8 @@ using namespace cv;
 #define TOPIC "/balltracker/point"
 #define PARAM_VIEW_MESSAGES "/balltracker/view_messages"
 #define PARAM_VIEW_IMAGES "/balltracker/view_images"
-#define CAMERAS_CALIBRATION_PATH "/jijiji/calibration.txt"
+#define CAMERAS_CALIBRATION_PATH "/home/moro/Apuntes/ROVI/ROS/res/ost.txt"
+
 
 
 //----------------------------------------------------------------
@@ -147,12 +148,15 @@ private:
 
 	void loadCamFromStream(istream & input, Camera &cam);
 	void readStereoCameraFile(const string & fileNameP, StereoPair &stereoPair);
+	void jumpLines(std::istream & input, int number);
+
 	geometry_msgs::Point stereopsis(cv::Point & tracked_point);
 	geometry_msgs::Point triangulationOpenCV(cv::Point & tracked_point_left, cv::Point & tracked_point_right);
 
 	/*
 	 * Feature Extraction
 	 */
+	cv::Point findBall(Mat const &img);
 	cv::Point findFeatureBasedOnLine(Mat & image, Mat & epipolar);
 
 	/**
@@ -164,6 +168,8 @@ private:
 	void callback(sensor_msgs::ImageConstPtr const &msgLeft, sensor_msgs::ImageConstPtr const &msgRight)
 	{
 		//Check if the creator wants to know that the hell is going on
+		_view_messages = false;
+		_view_images = false;
 		ros::param::get(PARAM_VIEW_MESSAGES, _view_messages);
 		ros::param::get(PARAM_VIEW_IMAGES, _view_images);
 
@@ -207,7 +213,7 @@ private:
  * @param img The image to search in
  * @return The center of the ball
  */
-cv::Point findBall(cv::Mat const &img)
+cv::Point SyncedImages::findBall(cv::Mat const &img)
 {
 	cv::Mat gray;
 	cv::cvtColor(img, gray, CV_BGR2GRAY);
@@ -248,6 +254,7 @@ cv::Point SyncedImages::findFeatureBasedOnLine(Mat & image, Mat & epipolar){
 
 
 
+
 //----------------------------------------------------------------
 //						Triangulation
 //----------------------------------------------------------------
@@ -260,44 +267,74 @@ cv::Point SyncedImages::findFeatureBasedOnLine(Mat & image, Mat & epipolar){
  */
 void SyncedImages::loadCamFromStream(istream & input, Camera &cam) {
 	Mat intrinsic = Mat::zeros(3, 3, CV_64F);
-	Mat distortion = Mat::zeros(4, 1, CV_64F);
-	Mat projection = Mat::zeros(4, 4, CV_64F);
+	Mat distortion = Mat::zeros(5, 1, CV_64F);
+	Mat rectification = Mat::zeros(3, 3, CV_64F);
+	Mat projection = Mat::zeros(3, 4, CV_64F);
 	Mat transformation = Mat::eye(4, 4, CV_64F);
 	Mat translation = Mat::zeros(3, 1, CV_64F);
 	Mat rotation = Mat::zeros(3, 3, CV_64F);
 	double image_width, image_height;
 
 	input.precision(20);
-	input >> image_width >> image_height;
 
+	jumpLines(input, 6);
+	input >> image_width;
+	jumpLines(input, 3);
+	input >> image_height;
+
+	jumpLines(input, 5);
 	input >> intrinsic.at<double>(0, 0) >> intrinsic.at<double>(0, 1)
-					>> intrinsic.at<double>(0, 2);
+            		>> intrinsic.at<double>(0, 2);
 	input >> intrinsic.at<double>(1, 0) >> intrinsic.at<double>(1, 1)
-					>> intrinsic.at<double>(1, 2);
+            		>> intrinsic.at<double>(1, 2);
 	input >> intrinsic.at<double>(2, 0) >> intrinsic.at<double>(2, 1)
-					>> intrinsic.at<double>(2, 2);
+            		>> intrinsic.at<double>(2, 2);
 
+	jumpLines(input, 3);
 	input >> distortion.at<double>(0, 0) >> distortion.at<double>(1, 0)
-					>> distortion.at<double>(2, 0) >> distortion.at<double>(3, 0);
+					>> distortion.at<double>(2, 0) >> distortion.at<double>(3, 0)
+					>> distortion.at<double>(4,0);
 
-	input >> rotation.at<double>(0, 0) >> rotation.at<double>(0, 1)
-					>> rotation.at<double>(0, 2);
-	input >> rotation.at<double>(1, 0) >> rotation.at<double>(1, 1)
-					>> rotation.at<double>(1, 2);
-	input >> rotation.at<double>(2, 0) >> rotation.at<double>(2, 1)
-					>> rotation.at<double>(2, 2);
-	input >> translation.at<double>(0) >> translation.at<double>(1)
-					>> translation.at<double>(2);
+	jumpLines(input, 3);
+	input >> rectification.at<double>(0,0) >> rectification.at<double>(0,1)
+            		>> rectification.at<double>(0,2);
+	input >> rectification.at<double>(1,0) >> rectification.at<double>(1,1)
+            		>> rectification.at<double>(1,2);
+	input >> rectification.at<double>(2,0) >> rectification.at<double>(2,1)
+            		>> rectification.at<double>(2,2);
 
-	hconcat(rotation, translation, transformation);
-	Mat row = Mat::zeros(1, 4, CV_64F);
-	row.at<double>(0, 3) = 1;
-	transformation.push_back(row);
+	jumpLines(input, 3);
+	input >> projection.at<double>(0,0) >> projection.at<double>(0,1)
+            		>> projection.at<double>(0,2) >> projection.at<double>(0,3);
+	input >> projection.at<double>(1,0) >> projection.at<double>(1,1)
+            		>> projection.at<double>(1,2) >> projection.at<double>(1,3);
+	input >> projection.at<double>(2,0) >> projection.at<double>(2,1)
+            		>> projection.at<double>(2,2) >> projection.at<double>(2,3);
 
-	Mat tmp = intrinsic;
-	Mat tmp1 = Mat::zeros(3, 1, CV_64F);
-	hconcat(tmp, tmp1, tmp);
-	projection = tmp * transformation;
+	jumpLines(input, 1);
+
+	cout << image_height << image_width << endl;
+	cout << intrinsic << endl;
+	cout << distortion << endl;
+	cout << rectification << endl;
+	cout << projection << endl;
+
+	transformation = intrinsic.inv()*projection;
+	for(int i=0; i<3; i++){
+		for(int j=0; j<4; j++){
+			if(j!=3){
+				rotation.at<double>(i,j)=transformation.at<double>(i,j);
+			}
+			else{
+				translation.at<double>(i,0)=transformation.at<double>(i,j);
+			}
+		}
+	}
+
+	cout << transformation << endl;
+	cout << rotation << endl;
+	cout << translation << endl;
+
 
 	cam.distortion = distortion;
 	cam.intrinsic = intrinsic;
@@ -317,21 +354,30 @@ void SyncedImages::loadCamFromStream(istream & input, Camera &cam) {
  * @return If the read was correctly done
  */
 void SyncedImages::readStereoCameraFile(const string & fileNameP, StereoPair &stereoPair) {
-	int number_of_cameras;
 	Camera cam1, cam2;
 	ifstream ifs(fileNameP.c_str());
 	if (ifs) {
-		ifs >> number_of_cameras;
-		if (number_of_cameras == 2) {
-			loadCamFromStream(ifs, cam1);
-			loadCamFromStream(ifs, cam2);
-			stereoPair.cam1 = cam1;
-			stereoPair.cam2 = cam2;
-		}
-	_camerasCalibrated = true;
+		loadCamFromStream(ifs, cam1);
+		jumpLines(ifs, 1);
+		loadCamFromStream(ifs, cam2);
+		stereoPair.cam1 = cam1;
+		stereoPair.cam2 = cam2;
+		_camerasCalibrated = true;
 	}
 	else{
 		ROS_WARN("Calibration file found not found");
+	}
+}
+
+/**
+ * Jumps lines from a text file
+ * @param input File being read
+ * @param number Number of lines to jump
+ */
+void SyncedImages::jumpLines(std::istream & input, int number){
+	string line;
+	for(int i=0; i<number; i++){
+		getline(input, line);
 	}
 }
 
@@ -467,7 +513,7 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 			p1.y = erN.at<double>(1, 0);
 		} else {
 			double deltaA = (erN.at<double>(1, 0) - mrN.at<double>(1, 0))
-									/ (erN.at<double>(0, 0) - mrN.at<double>(0, 0));
+											/ (erN.at<double>(0, 0) - mrN.at<double>(0, 0));
 			double b = mrN.at<double>(1, 0) - deltaA * mrN.at<double>(0, 0);
 			p1.x = 0;
 			p1.y = b;
@@ -498,8 +544,8 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 	 * Calculate Point in Image 2
 	 */
 	cv::Point point_right = findFeatureBasedOnLine(_imgRight, erN);
-	x_right = tracked_point.x;
-	y_right = tracked_point.y;
+	x_right = point_right.x;
+	y_right = point_right.y;
 
 	// Put the chosen point into matrix and add the a 1 to the end
 	cv::Mat m_r(3, 1, CV_64F);
@@ -511,7 +557,7 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 	Mat mu1 = Cl(Range(0, 3), Range(0, 1)).cross(
 			M1inf(Range(0, 3), Range(0, 1))) / cv::norm(M1inf);
 	Mat v1 = M1inf(Range(0, 3), Range(0, 1))
-						/ cv::norm(M1inf(Range(0, 3), Range(0, 1)));
+								/ cv::norm(M1inf(Range(0, 3), Range(0, 1)));
 
 	// Compute the point of infinity for the second image and compute Plucker line parameters
 	cv::Mat M2inf = Pxr.inv(DECOMP_SVD) * m_r;
@@ -535,9 +581,9 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 
 	//Compute the closest point of intersection for the two lines of infinity
 	Mat M1 = (v1 * v2mu2T - (v1 * v2T) * v1 * v2mu1T)
-						/ pow(cv::norm(v1.cross(v2)), 2) * v1 + v1.cross(mu1);
+								/ pow(cv::norm(v1.cross(v2)), 2) * v1 + v1.cross(mu1);
 	Mat M2 = (v2 * v1mu1T - (v2 * v1T) * v2 * v1mu2T)
-						/ pow(cv::norm(v2.cross(v1)), 2) * v2 + v2.cross(mu1);
+								/ pow(cv::norm(v2.cross(v1)), 2) * v2 + v2.cross(mu1);
 
 	cout << "\nClosest point on the two lines\nM1: " << M1 << endl;
 	cout << "M2: " << M2 << endl;
@@ -550,6 +596,7 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 	point_geo_msg.x = avgM.at<double>(0,0) / avgM.at<double>(3,0);
 	point_geo_msg.y = avgM.at<double>(1,0) / avgM.at<double>(3,0);
 	point_geo_msg.z = avgM.at<double>(2,0) / avgM.at<double>(3,0);
+
 
 	return point_geo_msg;
 }
