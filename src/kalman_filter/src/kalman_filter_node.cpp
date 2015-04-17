@@ -20,7 +20,7 @@ using namespace std;
 using namespace cv;
 
 //ROS Paths
-#define SUBSCRIBER "/tracking/points"
+#define SUBSCRIBER "/balltracker/point"
 #define TOPIC "/kalman_filter/points"
 #define PARAM_DEBUGGING "/kalman_filter/debugging"
 

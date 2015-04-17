@@ -35,7 +35,7 @@ using namespace cv;
 #define TOPIC "/balltracker/point"
 #define PARAM_VIEW_MESSAGES "/balltracker/view_messages"
 #define PARAM_VIEW_IMAGES "/balltracker/view_images"
-#define CAMERAS_CALIBRATION_PATH "/home/moro/Apuntes/ROVI/ROS/res/ost.txt"
+#define CAMERAS_CALIBRATION_PATH "/home/veimox/Drive/Programming/ROS/RoVi/res/ost.txt"
 
 
 
@@ -111,9 +111,7 @@ private:
 	/*
 	 * 3D point calculation
 	 */
-	/**
-	 * Struct that defines a camera
-	 */
+	//Struct that defines a camera
 	struct Camera {
 		Mat intrinsic;
 		Mat transformation;
@@ -125,15 +123,13 @@ private:
 		double image_height;
 
 		void printData() {
-			cout << image_width << " " << image_height << "\n" << intrinsic << "\n"
-					<< distortion << "\n" << transformation << "\n" << projection
-					<< endl;
+			cout << image_width << " " << image_height << endl << intrinsic << endl
+					<< distortion << endl << transformation << endl << projection << endl;
 		}
 	};
 
-	/**
-	 * Struct to contain the information of two cameras
-	 */
+
+	//Struct to contain the information of two cameras
 	struct StereoPair {
 		Camera cam1;
 		Camera cam2;
@@ -284,40 +280,40 @@ void SyncedImages::loadCamFromStream(istream & input, Camera &cam) {
 
 	jumpLines(input, 5);
 	input >> intrinsic.at<double>(0, 0) >> intrinsic.at<double>(0, 1)
-            		>> intrinsic.at<double>(0, 2);
+            						>> intrinsic.at<double>(0, 2);
 	input >> intrinsic.at<double>(1, 0) >> intrinsic.at<double>(1, 1)
-            		>> intrinsic.at<double>(1, 2);
+            						>> intrinsic.at<double>(1, 2);
 	input >> intrinsic.at<double>(2, 0) >> intrinsic.at<double>(2, 1)
-            		>> intrinsic.at<double>(2, 2);
+            						>> intrinsic.at<double>(2, 2);
 
 	jumpLines(input, 3);
 	input >> distortion.at<double>(0, 0) >> distortion.at<double>(1, 0)
-					>> distortion.at<double>(2, 0) >> distortion.at<double>(3, 0)
-					>> distortion.at<double>(4,0);
+									>> distortion.at<double>(2, 0) >> distortion.at<double>(3, 0)
+									>> distortion.at<double>(4,0);
 
 	jumpLines(input, 3);
 	input >> rectification.at<double>(0,0) >> rectification.at<double>(0,1)
-            		>> rectification.at<double>(0,2);
+            						>> rectification.at<double>(0,2);
 	input >> rectification.at<double>(1,0) >> rectification.at<double>(1,1)
-            		>> rectification.at<double>(1,2);
+            						>> rectification.at<double>(1,2);
 	input >> rectification.at<double>(2,0) >> rectification.at<double>(2,1)
-            		>> rectification.at<double>(2,2);
+            						>> rectification.at<double>(2,2);
 
 	jumpLines(input, 3);
 	input >> projection.at<double>(0,0) >> projection.at<double>(0,1)
-            		>> projection.at<double>(0,2) >> projection.at<double>(0,3);
+            						>> projection.at<double>(0,2) >> projection.at<double>(0,3);
 	input >> projection.at<double>(1,0) >> projection.at<double>(1,1)
-            		>> projection.at<double>(1,2) >> projection.at<double>(1,3);
+            						>> projection.at<double>(1,2) >> projection.at<double>(1,3);
 	input >> projection.at<double>(2,0) >> projection.at<double>(2,1)
-            		>> projection.at<double>(2,2) >> projection.at<double>(2,3);
+            						>> projection.at<double>(2,2) >> projection.at<double>(2,3);
 
 	jumpLines(input, 1);
 
-	cout << image_height << image_width << endl;
-	cout << intrinsic << endl;
-	cout << distortion << endl;
-	cout << rectification << endl;
-	cout << projection << endl;
+	if (_view_messages) cout << image_height << image_width << endl;
+	if (_view_messages) cout << intrinsic << endl;
+	if (_view_messages) cout << distortion << endl;
+	if (_view_messages) cout << rectification << endl;
+	if (_view_messages) cout << projection << endl;
 
 	transformation = intrinsic.inv()*projection;
 	for(int i=0; i<3; i++){
@@ -331,9 +327,9 @@ void SyncedImages::loadCamFromStream(istream & input, Camera &cam) {
 		}
 	}
 
-	cout << transformation << endl;
-	cout << rotation << endl;
-	cout << translation << endl;
+	if (_view_messages) cout << transformation << endl;
+	if (_view_messages) cout << rotation << endl;
+	if (_view_messages) cout << translation << endl;
 
 
 	cam.distortion = distortion;
@@ -426,8 +422,8 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 	img_2 = _imgRight;
 
 	if (_view_messages) {
-		cout << "ProjectionMatrixLeft:" << endl <<_stereoCam.cam1.projection<<endl << endl;
-		cout << "ProjectionMatrixRight:" << endl <<_stereoCam.cam2.projection<<endl;
+		cout << "ProjectionMatrixLeft:" << endl <<_stereoCam.cam1.projection << endl << endl;
+		cout << "ProjectionMatrixRight:" << endl <<_stereoCam.cam2.projection << endl;
 	}
 
 	//Take out the translation and rotation part from the projection matrices
@@ -445,7 +441,7 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 	Mat Cl = -1.0 * Pxl.inv(DECOMP_SVD) * pxl;
 	Cl.push_back(tmpone);
 
-	if (_view_messages) cout << "\nOptical centerLeft: " << Cl << "\nOptical centerRight" << Cr << endl;
+	if (_view_messages) cout << endl << "Optical centerLeft: " << Cl << endl << "Optical centerRight" << Cr << endl;
 
 	//Compute the epipoles
 	Mat el = _stereoCam.cam1.projection * Cr;
@@ -475,17 +471,11 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 	 *
 	 *
 	 */
-	double x_left, y_left, x_right, y_right;
-
-
-
-	x_left = tracked_point.x;
-	y_left = tracked_point.y;
 
 	// Put the chosen point into matrix and add the a 1 to the end
 	cv::Mat m1(3, 1, CV_64F);
-	m1.at<double>(0, 0) = x_left;
-	m1.at<double>(1, 0) = y_left;
+	m1.at<double>(0, 0) = tracked_point.x;
+	m1.at<double>(1, 0) = tracked_point.y;
 	m1.at<double>(2, 0) = 1;
 
 	//Compute the Point of infinity for the first image
@@ -513,7 +503,7 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 			p1.y = erN.at<double>(1, 0);
 		} else {
 			double deltaA = (erN.at<double>(1, 0) - mrN.at<double>(1, 0))
-											/ (erN.at<double>(0, 0) - mrN.at<double>(0, 0));
+															/ (erN.at<double>(0, 0) - mrN.at<double>(0, 0));
 			double b = mrN.at<double>(1, 0) - deltaA * mrN.at<double>(0, 0);
 			p1.x = 0;
 			p1.y = b;
@@ -529,7 +519,7 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 		// here we use an OpenCV function, the epipolar line is shown in red
 		vector<cv::Vec3f> lines;
 		vector<cv::Point2f> points;
-		points.push_back(cv::Point2f(x_left, y_left));
+		points.push_back(cv::Point2f(tracked_point.x, tracked_point.y));
 		cv::computeCorrespondEpilines(points, 1, Flr, lines);
 		for (vector<cv::Vec3f>::const_iterator it = lines.begin();
 				it != lines.end(); ++it) {
@@ -544,30 +534,28 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 	 * Calculate Point in Image 2
 	 */
 	cv::Point point_right = findFeatureBasedOnLine(_imgRight, erN);
-	x_right = point_right.x;
-	y_right = point_right.y;
 
 	// Put the chosen point into matrix and add the a 1 to the end
 	cv::Mat m_r(3, 1, CV_64F);
-	m_r.at<double>(0, 0) = x_right;
-	m_r.at<double>(1, 0) = y_right;
+	m_r.at<double>(0, 0) = point_right.x;
+	m_r.at<double>(1, 0) = point_right.y;
 	m_r.at<double>(2, 0) = 1;
 
-	// Compute plucker lines parameters for image 1
+	//Compute plucker lines parameters for image 1
 	Mat mu1 = Cl(Range(0, 3), Range(0, 1)).cross(
 			M1inf(Range(0, 3), Range(0, 1))) / cv::norm(M1inf);
 	Mat v1 = M1inf(Range(0, 3), Range(0, 1))
-								/ cv::norm(M1inf(Range(0, 3), Range(0, 1)));
+												/ cv::norm(M1inf(Range(0, 3), Range(0, 1)));
 
-	// Compute the point of infinity for the second image and compute Plucker line parameters
+	//Compute the point of infinity for the second image and compute Plucker line parameters
 	cv::Mat M2inf = Pxr.inv(DECOMP_SVD) * m_r;
 
 	if (_view_messages) cout << "Point of infinity image2: " << M2inf << endl;
 	Mat mu2 = Cr(Range(0, 3), Range(0, 1)).cross(M2inf) / cv::norm(M2inf);
 	Mat v2 = M2inf / cv::norm(M2inf);
 
-	if (_view_messages) cout << "\nPlucker line parameters:\nmu1: " << mu1 << "\nv1: " << v1
-			<< "\nmu2: " << mu2 << "\nv2: " << v2 << endl;
+	if (_view_messages) cout << endl << "Plucker line parameters:" << endl << "mu1: " << mu1 << endl
+			<< "v1: " << v1 << endl << "mu2: " << mu2 << endl << "v2: " << v2 << endl;
 
 	// Some intermediate steps to utilize OpenCV matrix manipulations
 	Mat v2mu2T, v2mu1T, v1mu1T, v1mu2T;
@@ -581,16 +569,16 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point & tracked_point){
 
 	//Compute the closest point of intersection for the two lines of infinity
 	Mat M1 = (v1 * v2mu2T - (v1 * v2T) * v1 * v2mu1T)
-								/ pow(cv::norm(v1.cross(v2)), 2) * v1 + v1.cross(mu1);
+												/ pow(cv::norm(v1.cross(v2)), 2) * v1 + v1.cross(mu1);
 	Mat M2 = (v2 * v1mu1T - (v2 * v1T) * v2 * v1mu2T)
-								/ pow(cv::norm(v2.cross(v1)), 2) * v2 + v2.cross(mu1);
+												/ pow(cv::norm(v2.cross(v1)), 2) * v2 + v2.cross(mu1);
 
-	cout << "\nClosest point on the two lines\nM1: " << M1 << endl;
-	cout << "M2: " << M2 << endl;
+	if (_view_messages) cout << endl << "Closest point on the two lines"<< endl << "M1: "
+			<< M1 << endl << "M2: " << M2 << endl;
 
 	// Compute average point
 	Mat avgM = M1 + (M2 - M1) / 2;
-	cout << "\nAverage point: " << avgM << endl;
+	cout << endl << "Average point: " << avgM << endl;
 
 	geometry_msgs::Point point_geo_msg;
 	point_geo_msg.x = avgM.at<double>(0,0) / avgM.at<double>(3,0);
