@@ -6,7 +6,9 @@
 //STD
 #include <vector>
 #include <fstream>
-#include <atomic>
+
+// Boost
+#include <boost/thread/mutex.hpp>
 
 //OpenCV
 #include <opencv2/opencv.hpp>
@@ -51,25 +53,25 @@ class SyncedImages
 {
 public:
 	SyncedImages()
-: _nh()
-, _it(_nh)
-, _leftImgSub(_it, SUBSCRIBER_CAMERA_1, 1)
-, _rightImgSub(_it, SUBSCRIBER_CAMERA_2, 1)
-, _sync(policy_type(1), _leftImgSub, _rightImgSub)
-, _updated(false)
-, _view_images(false)
-, _view_messages(false)
-{
-		//ROS Parameters
-		_nh.setParam(PARAM_VIEW_MESSAGES, false);
-		_nh.setParam(PARAM_VIEW_IMAGES, false);
-		//Publisher
-		_point_pub = _nh.advertise<geometry_msgs::Point>(TOPIC, 1);
-		//Calibrate the cameras from the file
-		if (!_camerasCalibrated) readStereoCameraFile(CAMERAS_CALIBRATION_PATH, _stereoCam);
-		//Connect the callback
-		_sync.registerCallback(boost::bind(&SyncedImages::callback, this, _1, _2));
-}
+        : _nh()
+        , _it(_nh)
+        , _leftImgSub(_it, SUBSCRIBER_CAMERA_1, 8)
+        , _rightImgSub(_it, SUBSCRIBER_CAMERA_2, 8)
+        , _sync(policy_type(2), _leftImgSub, _rightImgSub)
+        , _updated(false)
+        , _view_images(false)
+        , _view_messages(false)
+    {
+            //ROS Parameters
+            _nh.setParam(PARAM_VIEW_MESSAGES, false);
+            _nh.setParam(PARAM_VIEW_IMAGES, false);
+            //Publisher
+            _point_pub = _nh.advertise<geometry_msgs::Point>(TOPIC, 1);
+            //Calibrate the cameras from the file
+            if (!_camerasCalibrated) readStereoCameraFile(CAMERAS_CALIBRATION_PATH, _stereoCam);
+            //Connect the callback
+            _sync.registerCallback(boost::bind(&SyncedImages::callback, this, _1, _2));
+    }
 
 	bool updated() const
 	{
@@ -78,13 +80,13 @@ public:
 
 	bool images(cv::Mat &imgLeft, cv::Mat &imgRight)
 	{
-		if (_lock.test_and_set(memory_order_acquire))
-			return false;
+        if (!_mutex.try_lock())
+            return false;
 
 		_imgLeft.copyTo(imgLeft);
 		_imgRight.copyTo(imgRight);
 		_updated = false;
-		_lock.clear(memory_order_release);
+        _mutex.unlock();
 		return true;
 	}
 
@@ -106,7 +108,7 @@ private:
 
 	//Image Sync
 	bool _updated;
-	atomic_flag _lock{ATOMIC_FLAG_INIT};
+    boost::mutex _mutex;
 
 	/*
 	 * 3D point calculation
@@ -169,9 +171,9 @@ private:
 		ros::param::get(PARAM_VIEW_MESSAGES, _view_messages);
 		ros::param::get(PARAM_VIEW_IMAGES, _view_images);
 
-		// If currently locked, we disregard this update.
-		if (_lock.test_and_set(memory_order_acquire))
-			return;
+        // If currently locked, we disregard this update.
+        if (!_mutex.try_lock())
+            return false;
 
 		//Receive images
 		_imgLeft = cv_bridge::toCvCopy(msgLeft, sensor_msgs::image_encodings::BGR8)->image;
@@ -196,7 +198,7 @@ private:
 
 		//Sync
 		_updated = true;
-		_lock.clear(memory_order_release);
+        _mutex.unlock();
 	}
 };
 
