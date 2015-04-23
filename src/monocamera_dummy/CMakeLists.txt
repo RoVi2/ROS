@@ -19,10 +19,10 @@ find_package(catkin REQUIRED COMPONENTS
 #FILES
 #)
 
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-)
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs
+# )
 
 ## Generate added messages and services
 #catkin_package(
