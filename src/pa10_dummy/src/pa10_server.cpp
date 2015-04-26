@@ -131,14 +131,14 @@ uint32_t readValue(unsigned char address)
 	uint32_t result = 0;
 
 	sprintf(command,"#R:%04X\n",address);	//Generate the command
-    //device->setTimeout((int)TIMEOUT);
-    device->write(command);//Request data from the device
+	//device->setTimeout((int)TIMEOUT);
+	device->write(command);//Request data from the device
 	//device->readline(reply);	       		//Read line from the device
 	std::string reply = device->readline();	       		//Read line from the device
 
-    char *cstr = new char[reply.length() + 1];
-    strcpy(cstr, reply.c_str());
- 
+	char *cstr = new char[reply.length() + 1];
+	strcpy(cstr, reply.c_str());
+
 	char* start = cstr+5;					//Remove the initial part of the line
 	start[8]= '\0';							//Remove any excess from the string
 
@@ -160,11 +160,11 @@ bool writeValue(uint16_t address, uint32_t value)
 	char reply[128] = "";								//Create register to hold reply
 
 	sprintf(command,"#W:%04X %08X\n",address, value);	//Generate the command
-    ROS_INFO("command #W:%04X %08X", address, value);
-    device->write(command);								//Send command to the device
+	ROS_INFO("command #W:%04X %08X", address, value);
+	device->write(command);								//Send command to the device
 	std::string replyStr= device->readline();//Read the response
 	ROS_DEBUG("return value %s Stop", replyStr.c_str());
-    command[16] = '\0';
+	command[16] = '\0';
 	ROS_DEBUG("%s",command);
 
 	if(strcmp(reply,"#S_W\n") == 0) return true;		//If successful return true
@@ -265,37 +265,37 @@ void sendSetup(uint8_t head, float positions[7], float commands[7])
 	config |= MASK_CONTROL_ENABLE_POS;
 	config |= ((speedfactor << OFFSET_VLIMIT) & MASK_VLIMIT);
 	config |= MASK_CONTROL_CMD_PT;
-//	config |= MASK_CONTROL_CMD_GOTO;
+	//	config |= MASK_CONTROL_CMD_GOTO;
 	config |= head << OFFSET_HEAD;
 	writeValue(ADR_CONTROL, config);
 
 	//Set speed scaler
 	writeValue(ADR_ENABLE_SERVOS, 0x7F);
 
-    
+
 	//Send joint configurations
 	for(int i = 0; i < 7; i++) {
 		if (i == 6)
 			writeValue(jointPosAddresses[i], ((positions[i] * 50 * pow(2,14))/360.0f) + finalOffset);
 		else
 			writeValue(jointPosAddresses[i], ((positions[i] * 50 * pow(2,14))/360.0f)); 
-      // writeValue(jointCmdAddresses[i], pigains[i]);
-      // (degrees*50*2^14)/360
-//def degreeToInt(degree):
-//    if degree>360 or degree < -360:
-//        raise ValueError('Wrong angles')
- //   return (degree*50*2**14)/360
-      //tmp = hex(tmpint & 0xffffffff)[2:-1]
-      //std::stringstream stream;
-      //stream << std::hex << your_int;
-      //std::string result( stream.str() );
-      //
-      //  
-      // 
-      writeValue(jointCmdAddresses[i], (commands[i] * 15.0f ));
-      //writeValue(jointCmdAddresses[i], (commands[i] * 50 * pow(2,14))/360.0f );
-       }
-    
+		// writeValue(jointCmdAddresses[i], pigains[i]);
+		// (degrees*50*2^14)/360
+		//def degreeToInt(degree):
+		//    if degree>360 or degree < -360:
+		//        raise ValueError('Wrong angles')
+		//   return (degree*50*2**14)/360
+		//tmp = hex(tmpint & 0xffffffff)[2:-1]
+		//std::stringstream stream;
+		//stream << std::hex << your_int;
+		//std::string result( stream.str() );
+		//
+		//
+		//
+		writeValue(jointCmdAddresses[i], (commands[i] * 15.0f ));
+		//writeValue(jointCmdAddresses[i], (commands[i] * 50 * pow(2,14))/360.0f );
+	}
+
 	//Commit settings
 	ROS_DEBUG("Committing");
 	writeValue(ADR_COMMIT_WRITE,0);
@@ -366,7 +366,7 @@ void sendRegulationParamaters() {
 	config |= tail << OFFSET_HEAD;
 	writeValue(ADR_CONTROL, config);
 
- 
+
 	//Send joint configurations
 	for(int i = 0; i < 7; i++) {
 		writeValue(jointCmdAddresses[i], pigains[i]);
@@ -376,13 +376,13 @@ void sendRegulationParamaters() {
 	ROS_INFO("Committing");
 	writeValue(ADR_COMMIT_WRITE,0);
 	//Send joint configurations
-//	for(int i = 0; i < 7; i++) {
-//		writeValue(jointCmdAddresses[i], pigains[i]);
-//	}
+	//	for(int i = 0; i < 7; i++) {
+	//		writeValue(jointCmdAddresses[i], pigains[i]);
+	//	}
 
 	//Commit settings
-//	ROS_INFO("Committing");
-//	writeValue(ADR_COMMIT_WRITE,0);
+	//	ROS_INFO("Committing");
+	//	writeValue(ADR_COMMIT_WRITE,0);
 
 }
 
@@ -433,25 +433,25 @@ void runQueueBuffer()
 		if (it == items.end()) break;
 
 
-	//	if (gripperpos != item.gripping) {
-	//		ROS_DEBUG("Waiting to grip");
+		//	if (gripperpos != item.gripping) {
+		//		ROS_DEBUG("Waiting to grip");
 		if(clearJointQueue == true){ 
 			disableController();
 			break;
 		}
-						
+
+		tail = readTail();
+		while (head != tail) {
 			tail = readTail();
-			while (head != tail) {
-				tail = readTail();
-				ROS_DEBUG("Head vs Tail: %d vs %d",head, tail);
-				ros::spinOnce();
-				usleep(200 * 10);
-			}
+			ROS_DEBUG("Head vs Tail: %d vs %d",head, tail);
+			ros::spinOnce();
+			usleep(200 * 10);
+		}
 
-//			ROS_DEBUG("sleep for: %f s", (it-1)->commands[0]);
-//			usleep(((it-1)->commands[0] + 50) * 10 * 1000);
+		//			ROS_DEBUG("sleep for: %f s", (it-1)->commands[0]);
+		//			usleep(((it-1)->commands[0] + 50) * 10 * 1000);
 
-//			ROS_DEBUG("Setting gripper to %x",item.gripping);
+		//			ROS_DEBUG("Setting gripper to %x",item.gripping);
 		/*	if (!setGripper(item.gripping)) {
 				queueSucess = false;
 				ROS_WARN("Queue failed");
@@ -467,15 +467,15 @@ void runQueueBuffer()
 			}
 			gripperpos = item.gripping;
 			ROS_DEBUG("Grip done"); */
-//		} 
-  //  else {
-//			ROS_DEBUG("Waiting for buffer to move");
-//			while (head == tail && running) {
-//				tail = readTail();
-//				usleep(200 * 1000);
-//			}
-//		}
-//		ROS_DEBUG("Resuming");
+		//		}
+		//  else {
+		//			ROS_DEBUG("Waiting for buffer to move");
+		//			while (head == tail && running) {
+		//				tail = readTail();
+		//				usleep(200 * 1000);
+		//			}
+		//		}
+		//		ROS_DEBUG("Resuming");
 
 	}
 
@@ -510,12 +510,12 @@ bool addtoQueue_service(pa10_dummy::addToQueue::Request  &req, pa10_dummy::addTo
 		//		item.positions[i] = (float)jointPosLimits[i] * (req.positions[i] / 100.0f);
 		//		item.commands[i] = (float)jointCmdLimits[i] * (req.commands[i] / 100.0f);
 		item1.positions[i] = req.positions[i];
-        if(fabs(item1.positions[i]) <= 0.0005)
-            item1.positions[i] = 0.0005;
+		if(fabs(item1.positions[i]) <= 0.0005)
+			item1.positions[i] = 0.0005;
 
-      ROS_INFO("joints %f",item1.positions[i]);
+		ROS_INFO("joints %f",item1.positions[i]);
 		item1.commands[i] = req.commands[i];
-      ROS_INFO("joints %f",item1.commands[i]);
+		ROS_INFO("joints %f",item1.commands[i]);
 	}
 
 
@@ -565,28 +565,28 @@ bool setJoints_service(pa10_dummy::setJointConfig::Request  &req, pa10_dummy::se
  * Function :	Handles requests from ROS clients trying to set current Joint Configuration
  * **************************************************************************************/
 {
-    ROS_INFO("setJoints_service call");
+	ROS_INFO("setJoints_service call");
 	//Create item
 	queueItem item;
 	for (uint8_t i = 0; i < 7; i++) {
 #ifndef NOROBOT 
 		item.positions[i] = req.positions[i];
-	        if(fabs(item.positions[i]) < 0.0005)
-    	        	item.positions[i] = 0.0005 ;
+		if(fabs(item.positions[i]) < 0.0005)
+			item.positions[i] = 0.0005 ;
 		item.commands[i] = req.commands[i];
-      		ROS_INFO("setJoints_service %f %f",item.positions[i],item.commands[i]);
+		ROS_INFO("setJoints_service %f %f",item.positions[i],item.commands[i]);
 #else
 
-	   for (uint8_t i = 0; i < 7; i++) {
-		jointPositions[i] = req.positions[i];
-           }
-           return true;
+		for (uint8_t i = 0; i < 7; i++) {
+			jointPositions[i] = req.positions[i];
+		}
+		return true;
 #endif
 
 	}
 	//item.gripping = req.gripper;
 	//setGripper(item.gripping);
-        ROS_DEBUG("SendSetup command");
+	ROS_DEBUG("SendSetup command");
 	//Send command to controller
 	sendSetup((readTail()+1) % 16, item.positions, item.commands);
 
@@ -610,16 +610,16 @@ int main(int argc, char **argv)
 
 	po::options_description desc("Allowed options");
 	desc.add_options()
-	    		("help", "produce help message")
-	    		("port",
-                po::value<string>()->default_value("/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A901H77U-if00-port0"), "Set serial port")
-//                po::value<string>()->default_value("/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A901H6XI-if00-port0"), "Set serial port")
-//	    		  po::value<string>()->default_value("/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A9013GPN-if00-port0"), "Set serial port")
-	    		("speedscale", po::value<int>()->default_value(100), "Set speed scaler")
-	    		("maxerror", po::value<int>()->default_value(10000), "Set speed scaler")
-	    		("getoffset", "Get offset from the final joint, overrides --offset")
-	    		("offset", po::value<int>(), "Offset of the final joint")
-	    		;
+	    				("help", "produce help message")
+						("port",
+								po::value<string>()->default_value("/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A901H77U-if00-port0"), "Set serial port")
+								//                po::value<string>()->default_value("/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A901H6XI-if00-port0"), "Set serial port")
+								//	    		  po::value<string>()->default_value("/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A9013GPN-if00-port0"), "Set serial port")
+								("speedscale", po::value<int>()->default_value(100), "Set speed scaler")
+								("maxerror", po::value<int>()->default_value(10000), "Set speed scaler")
+								("getoffset", "Get offset from the final joint, overrides --offset")
+								("offset", po::value<int>(), "Offset of the final joint")
+								;
 
 	po::positional_options_description p;
 	p.add("port", -1);
@@ -627,7 +627,7 @@ int main(int argc, char **argv)
 	po::variables_map vm;
 	po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
 	po::notify(vm);
-	
+
 
 	if (vm.count("help") || !vm.count("port")) {
 		cout << "rosrun pa10_control pa10_server port [options]" << endl;
@@ -651,11 +651,11 @@ int main(int argc, char **argv)
 	ROS_INFO("Speedfactor is %d",speedfactor);
 	ROS_INFO("Starting PA10 control on %s",portname.c_str());
 	//try{ 
-		//device.open(portname.c_str(), 115200);
- 
+	//device.open(portname.c_str(), 115200);
+
 #ifndef NOROBOT 
-        device = new serial::Serial(portname.c_str(), 115200, serial::Timeout::simpleTimeout(1000));
- 	//}	
+	device = new serial::Serial(portname.c_str(), 115200, serial::Timeout::simpleTimeout(1000));
+	//}
 	//catch(cereal::Exception& e)
 	if(!device->isOpen()){
 		ROS_FATAL("Failed to open the serial port!!!");
@@ -663,16 +663,16 @@ int main(int argc, char **argv)
 	}
 	ROS_INFO("The serial port is opened.");
 
-/*
+	/*
 	if (vm.count("getoffset") ) {
 		finalOffset = readValue(ADR_TARGET_POS_JOINT7 - 4);
 	} else if (vm.count("offset") )
 		finalOffset = vm["offset"].as<int>();
 	else
 		finalOffset = 0;
-   */
+	 */
 
-        finalOffset = 0;
+	finalOffset = 0;
 	ROS_INFO("End Joint offset: %d",finalOffset);
 
 	disableController();
@@ -680,7 +680,7 @@ int main(int argc, char **argv)
 	enableController();
 	usleep(500 * 1000);
 
-        float commands[7];
+	float commands[7];
 	getSetup(NULL, commands);
 
 	if ((uint32_t)commands[0] == 0x81600000) {
@@ -696,7 +696,7 @@ int main(int argc, char **argv)
 	sendRegulationParamaters();
 
 #endif
-        //ros::NodeHandle nodehandle;
+	//ros::NodeHandle nodehandle;
 	//startnode_service = nodehandle.advertiseService("pa10/start", startNode_service);
 	//stopnode_service = nodehandle.advertiseService("pa10/stop", stopNode_service);
 	//resetnode_service = nodehandle.advertiseService("pa10/reset", resetNode_service);
@@ -704,11 +704,11 @@ int main(int argc, char **argv)
 	ROS_INFO("Starting services.");
 	ros::NodeHandle nodehandle;
 	//startnode_service.shutdown();
-   getjointconfigservice = nodehandle.advertiseService("pa10/getJointConfig", getJointConfig_service);
+	getjointconfigservice = nodehandle.advertiseService("pa10/getJointConfig", getJointConfig_service);
 	setjointsservice = nodehandle.advertiseService("pa10/setJointsConfig", setJoints_service);
-//	addToQueueService = nodehandle.advertiseService("pa10/addItemtoQueue", addtoQueue_service);
-//   clearJointQueueService = nodehandle.advertiseService("pa10/clearJointQueue", clearJointQueue_service);
- 
+	addToQueueService = nodehandle.advertiseService("pa10/addItemtoQueue", addtoQueue_service);
+	clearJointQueueService = nodehandle.advertiseService("pa10/clearJointQueue", clearJointQueue_service);
+
 	ROS_INFO("PA10 Server is idle.");
 
 	ros::spin();

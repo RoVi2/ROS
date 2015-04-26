@@ -8,7 +8,7 @@ namespace {
 #ifndef NO_ROS
 		char** argv = NULL;
 		int argc = 0;
-		ros::init(argc, argv, "rx60RWSPlugin");
+		ros::init(argc, argv, "PA10RWSPlugin");
 #endif
 		return true;
 	}
@@ -41,7 +41,6 @@ SamplePlugin::~SamplePlugin()
 void SamplePlugin::initialize() {
     getRobWorkStudio()->genericEvent().add(boost::bind(&SamplePlugin::genericEvent, this, _1), this);    
     getRobWorkStudio()->stateChangedEvent().add(boost::bind(&SamplePlugin::stateChangedListener, this, _1), this);    
-   
 }
 
 void SamplePlugin::stateChangedListener(const rw::kinematics::State &state)

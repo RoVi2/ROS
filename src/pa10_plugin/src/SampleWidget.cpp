@@ -12,7 +12,9 @@
 #include <rw/kinematics/MovableFrame.hpp>
 #include <rw/trajectory/LinearInterpolator.hpp>
 
-#include "ros/ros.h"
+#include <ros/ros.h>
+#include <geometry_msgs/Point.h>
+
 #include "pa10_plugin/getJointConfig.h"
 #include "pa10_plugin/setJointConfig.h"
 
@@ -25,6 +27,7 @@ using namespace rw::loaders;
 using namespace rwlibs::task;
 using namespace rw::invkin;
 
+using namespace std;
 
 
 SampleWidget::SampleWidget(QWidget *parent)
@@ -49,6 +52,8 @@ void SampleWidget::initialize(WorkCell::Ptr workcell, rws::RobWorkStudio* rws,ro
 	_serviceClient = _nodeHandle->serviceClient<pa10_plugin::setJointConfig>("pa10/setJointsConfig");
 	_serviceClientGetJoint = _nodeHandle->serviceClient<pa10_plugin::getJointConfig>("pa10/getJointConfig");
 
+	_pointsSubscriber = _nodeHandle->subscribe("/points_server/points", 1, &SampleWidget::pointsCallback, this);
+
 	const std::vector<rw::common::Ptr<Device> >& devices = _rwWorkCell->getDevices();
 	if (devices.size() == 0)
 		return;
@@ -64,7 +69,6 @@ void SampleWidget::initialize(WorkCell::Ptr workcell, rws::RobWorkStudio* rws,ro
 
 void SampleWidget::stateChangedListener(const rw::kinematics::State &state)
 {
-
 	_state = state;
 }
 
@@ -134,6 +138,25 @@ void SampleWidget::callback() {
 	QCoreApplication::processEvents();
 }
 
+void SampleWidget::pointsCallback(const geometry_msgs::PointConstPtr & pointFromTopic){
+	//Get the points
+	_point.x = pointFromTopic->x;
+	_point.y = pointFromTopic->y;
+	_point.z = pointFromTopic->z;
+
+	ROS_INFO("Point!");
+
+	//Create a movable frame
+	MovableFrame* markerFrame = static_cast<MovableFrame*>(_rwWorkCell->findFrame("Ball"));
+	//And generates the transformation
+	Transform3D<> markerTransformation = Transform3D<>(
+			Vector3D<>(_point.x, _point.y, _point.z),
+			RPY<>(0, 0, 0).toRotation3D());
+	//So now the position is updated
+	markerFrame->setTransform(markerTransformation, _state);
+	//Updates the state in the RobWork Studio
+	_rws->setState(_state);
+}
 
 void SampleWidget::logMotionInfo(const Q& q, const Transform3D<>& transform, unsigned int blend, int status, int turn) {
 	//_log.flush();

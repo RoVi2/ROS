@@ -11,6 +11,7 @@
 #include <rwlibs/pathplanners/rrt/RRTQToQPlanner.hpp>
 #include <rwlibs/proximitystrategies/ProximityStrategyFactory.hpp>
 
+
 //ROS
 #include <ros/ros.h>
 #include <geometry_msgs/Point.h>
@@ -18,6 +19,8 @@
 //Services
 #include <path_planning/getJointConfig.h>
 #include <path_planning/setJointConfig.h>
+#include <path_planning/addToQueue.h>
+#include <path_planning/addToQueue.h>
 
 using namespace std;
 using namespace rw::common;
@@ -27,20 +30,22 @@ using namespace rw::models;
 using namespace rw::pathplanning;
 using namespace rw::proximity;
 using namespace rw::trajectory;
-using namespace rw::invkin;
 using namespace rwlibs::pathplanners;
 using namespace rwlibs::proximitystrategies;
 
 
+
 //RobWork Paths
-#define WORKCELL_PATH "/mnt/Free/Drive/Programming/ROS/RoVi/res/PA10Scene/ScenePA10RoVi2Demo.wc.xml"
-#define ROBOT_NAME "ScenePA10"
+#define WORKCELL_PATH "../../../res/PA10Scene/ScenePA10RoVi2Demo.wc.xml"
+#define ROBOT_NAME "PA10"
 
 //ROS Paths
 #define SUBSCRIBER "/kalman_filter/points"
 #define TOPIC "/path_planning/Q"
 #define PARAM_DEBUGGING "/path_planning/debugging"
 
+
+//Global variables
 Vector3D<double> point_kalman;
 
 /**
@@ -54,49 +59,83 @@ void callBack(const geometry_msgs::PointConstPtr & point_ros){
 
 int main(int argc, char** argv)
 {
+	/*
+	 * ROS Stuff
+	 */
 	ROS_INFO("Path Planning Started!");
 	ros::init(argc, argv, "path_planning_node");
-	//ROS
 	ros::NodeHandle nh;
 	ros::Subscriber point_sub;
 	ros::Publisher Q_pub;
 
 	//Debugging parameter
-	bool debugging = false;
+	bool debugging = true;
 	nh.setParam(PARAM_DEBUGGING, false);
 
 	//Get the new predicted point and store it
 	point_sub = nh.subscribe(SUBSCRIBER, 1,  callBack);
 
-	//Publisher for the Q
+	//Publisher of the Q
 	Q_pub = nh.advertise<geometry_msgs::Point>(TOPIC, 1);
 
+	//Services
+    ros::ServiceClient client_getJointConfig = nh.serviceClient<path_planning::getJointConfig>("pa10/getJointConfig");
+	ros::ServiceClient client_setJointConfig = nh.serviceClient<path_planning::setJointConfig>("pa10/setJointsConfig");
+    path_planning::getJointConfig srv_getJointConfig;
+    path_planning::setJointConfig srv_setJointConfig;
+
+    /*
+     * RobWork
+     */
 	//Load the workcell and the device
 	WorkCell::Ptr wc = WorkCellLoader::Factory::load(WORKCELL_PATH);
 	Device::Ptr device = wc->findDevice(ROBOT_NAME);
-	if (device == NULL) {
-		cerr << "Device not found!" << endl;
-		return 0;
-	}
 
-	//Initialize RobWork stuff
+	//Generate randomness for the RRT
+	Math::seed();
+
+	//Obtain the current state and position of the real robot
 	State state = wc->getDefaultState();
-	Q Q_current = device->getQ(state);
-	Q Q_desired = Q_current;
 
-	double extend = 0.001; //Distance to search the next point
+	Q Q_current = device->getQ(state);
+    /*
+	if (client_getJointConfig.call(srv_getJointConfig)){
+    	for (unsigned char joint=0; joint<device->getDOF(); joint++)
+    		Q_current(joint) = srv_getJointConfig.response.positions[joint];
+    	device->setQ(Q_current, state);
+    }
+    else ROS_WARN("Real Robot not found!");
+*/
+	Q Q_desired;
+	//Q Q_home(7, 0,-0.65,0,1.8,0,0.42,0);
+	Q Q_home(7, 0,0,0,0,0,0,0);
+
+	double extend = 0.01; //Distance to search the next point
 	QPath pathToDesiredQ;
 	CollisionDetector detector(wc, ProximityStrategyFactory::makeDefaultCollisionStrategy());
-	PlannerConstraint plannerConstraint = PlannerConstraint::make(&detector,device,state);
-	QSampler::Ptr sampler = QSampler::makeConstrained(QSampler::makeUniform(device),plannerConstraint.getQConstraintPtr());
+	PlannerConstraint constraint = PlannerConstraint::make(&detector,device,state);
+	QSampler::Ptr sampler = QSampler::makeConstrained(QSampler::makeUniform(device),constraint.getQConstraintPtr());
 	QMetric::Ptr metric = MetricFactory::makeEuclidean<Q>();
-	QToQPlanner::Ptr planner = RRTPlanner::makeQToQPlanner(plannerConstraint, sampler, metric, extend, RRTPlanner::RRTConnect);
+	constraint = PlannerConstraint::make(&detector,device,state);
+	QToQPlanner::Ptr planner = RRTPlanner::makeQToQPlanner(constraint, sampler, metric, extend, RRTPlanner::RRTConnect);
 
-	//Services
-	ros::ServiceClient serviceClientSetQueue;
-    ros::ServiceClient serviceClientGetJoint;
-    nh.serviceClient<path_planning::setJointConfig>("pa10/setJointsConfig");
-    nh.serviceClient<path_planning::getJointConfig>("pa10/getJointConfig");
+
+    cout << "From " << device->getQ(state) << " to " << Q_home << endl;
+	Timer t;
+	t.resetAndResume();
+    planner->query(device->getQ(state), Q_home, pathToDesiredQ, 10);
+    t.pause();
+    cout << "Path of length " << pathToDesiredQ.size() << " found in " << t.getTimeMs() << " miliseconds." << endl << endl;
+
+    for (auto q : pathToDesiredQ){
+    	for (unsigned char joint=0; joint<device->getDOF(); joint++)
+    		srv_setJointConfig.request.positions[joint] = q[joint];
+    	if (debugging) cout << q << endl;
+    	//if (client_setJointConfig.call(srv_setJointConfig)) ROS_INFO("Joint sent correctly!");
+    }
+
+    cout << endl << "YYAAA" << endl;
+    return 0;
 
     /*
 	 * Loop!
@@ -115,7 +154,7 @@ int main(int argc, char** argv)
 	//Translate the kalman point from the camera to the robot's base
 	point_kalman = (inverse(device->baseTframe(wc->findFrame("Camera"), state))) * point_kalman;
 	//Calculate in polar coordinates so it will simplify the calculations P(Radius, angle, height)
-	double radius = sqrt( pow(point_kalman[0], 2) +  pow(point_kalman[1], 2));
+	double radius = sqrt(pow(point_kalman[0], 2) +  pow(point_kalman[1], 2));
 	double angle = atan2(point_kalman[1],point_kalman[0]);
 	double height = point_kalman[2];
 	Vector3D<double> point_kalman_polar (radius, angle, height);
@@ -127,7 +166,7 @@ int main(int argc, char** argv)
 	Transform3D<double> cameraTransfomationMatrix = Transform3D<double>(cameraPos, cameraRotation.toRotation3D());
 
 	//Now we can calculate the Q with inverse kinematics
-	JacobianIKSolver solver(device, state);
+	rw::invkin::JacobianIKSolver solver(device, state);
 	solver.setCheckJointLimits(1); //Activate the joint limits checking
 	Q_desired = solver.solve(cameraTransfomationMatrix, state)[0];
 
@@ -135,6 +174,7 @@ int main(int argc, char** argv)
 	planner->query(Q_current, Q_desired, pathToDesiredQ);
 
 	//Publish the Qs
+
 
 
 	ros::spin();

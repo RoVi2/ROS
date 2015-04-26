@@ -41,43 +41,47 @@
 
 #include <vector>
 #include <utility>
-#include "ros/ros.h"
+#include <ros/ros.h>
+#include <geometry_msgs/Point.h>
 
 class SampleWidget : public QWidget, private Ui::SampleWidgetClass
 {
-    Q_OBJECT
+	Q_OBJECT
 
 public:
-    SampleWidget(QWidget *parent = 0);
-    ~SampleWidget();
+	SampleWidget(QWidget *parent = 0);
+	~SampleWidget();
 	void initialize(rw::models::WorkCell::Ptr workcell, rws::RobWorkStudio* rws, ros::NodeHandle* nodeHandle);
 
-    void stateChangedListener(const rw::kinematics::State &state);
+	void stateChangedListener(const rw::kinematics::State &state);
 private:
-        ros::NodeHandle *_nodeHandle;
+	ros::NodeHandle *_nodeHandle;
 	ros::ServiceClient _serviceClient;
 	ros::ServiceClient _serviceClientSetQueue;
-        ros::ServiceClient _serviceClientGetJoint;
+	ros::ServiceClient _serviceClientGetJoint;
+    ros::Subscriber _pointsSubscriber;
+    geometry_msgs::Point_<float> _point;
 
-private slots:
-    
-    void callback();
-    void eventBtn();
+	private slots:
 
-private:
+	void callback();
+    void pointsCallback(const geometry_msgs::PointConstPtr & pointFromTopic);
+	void eventBtn();
 
-  	rw::math::Transform3D<> _w2blok;
-        rw::models::WorkCell::Ptr _rwWorkCell;
+	private:
+
+	rw::math::Transform3D<> _w2blok;
+	rw::models::WorkCell::Ptr _rwWorkCell;
 	rw::models::SerialDevice *_device;
 	rw::kinematics::State _state;
-         rw::common::PropertyMap _properties;
+	rw::common::PropertyMap _properties;
 	rws::RobWorkStudio* _rws;
 	bool openWorkCell();
 
-    //rw::common::LogFileWriter _log;
-    void logTaskInfo(rwlibs::task::QTask::Ptr task);
-    int jointconfigNumber; 
-  void logMotionInfo(const rw::math::Q& q, const rw::math::Transform3D<>& transform, unsigned int blend, int status, int turn);
+	//rw::common::LogFileWriter _log;
+	void logTaskInfo(rwlibs::task::QTask::Ptr task);
+	int jointconfigNumber;
+	void logMotionInfo(const rw::math::Q& q, const rw::math::Transform3D<>& transform, unsigned int blend, int status, int turn);
 };
 
 #endif // SampleWIDGET_HPP
