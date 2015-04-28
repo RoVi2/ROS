@@ -110,14 +110,6 @@ int main(int argc, char** argv)
 	Q Q_current(7,0,0,0,0,0,0,0);
 	Timer pathNotFoundTimer;
 	int pathNotFoundTimeLimit = 10;
-	/*
-	if (client_getJointConfig.call(srv_getJointConfig)){
-    	for (unsigned char joint=0; joint<device->getDOF(); joint++)
-    		Q_current(joint) = srv_getJointConfig.response.positions[joint];
-    	device->setQ(Q_current, state);
-    }
-    else ROS_WARN("Real Robot not found!");
-	 */
 
 	double extend = 0.01; //Distance to search the next point
 	QPath pathToDesiredQ;

@@ -36,6 +36,9 @@ SampleWidget::SampleWidget(QWidget *parent)
 	setupUi(this);
 	connect(_sendJointBtn, SIGNAL(released()), this, SLOT(eventBtn()));
 	connect(_getJointBtn, SIGNAL(released()), this, SLOT(eventBtn()));
+
+	//_updateTimer = new QTimer(this);
+	//connect(_updateTimer, SIGNAL(timeout()), this, SLOT(callback()));
 }
 
 SampleWidget::~SampleWidget()
@@ -135,6 +138,7 @@ bool SampleWidget::openWorkCell() {
 }
 
 void SampleWidget::callback() {
+	_rws->log().info() << "Callback!\n";
 	QCoreApplication::processEvents();
 }
 

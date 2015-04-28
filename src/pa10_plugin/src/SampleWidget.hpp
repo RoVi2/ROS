@@ -70,6 +70,8 @@ private:
 
 	private:
 
+	//QTimer _updateTimer;
+
 	rw::math::Transform3D<> _w2blok;
 	rw::models::WorkCell::Ptr _rwWorkCell;
 	rw::models::SerialDevice *_device;
