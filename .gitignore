@@ -1,3 +1,7 @@
 #Folders
 /build
 /devel
+
+#Sublime
+*.sublime-project
+*.sublime-workspace

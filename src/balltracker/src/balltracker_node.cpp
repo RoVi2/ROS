@@ -21,7 +21,7 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
-#include <geometry_msgs/Point.h>
+#include <geometry_msgs/PointStamped.h>
 
 //Namespaces
 using namespace std;
@@ -62,7 +62,7 @@ public:
         _nh.setParam(PARAM_VIEW_IMAGES, false);
 
         //Publisher
-        _point_pub = _nh.advertise<geometry_msgs::Point>(TOPIC, 1);
+        _point_pub = _nh.advertise<geometry_msgs::PointStamped>(TOPIC, 1);
 
         //Calibrate the cameras from the file
         if (!_camerasCalibrated)
@@ -100,6 +100,7 @@ private:
     image_transport::SubscriberFilter _rightImgSub;
     message_filters::Synchronizer<policy_type> _sync;
     ros::Publisher _point_pub;
+    ros::WallTime _wallTime;
 
     //Image Sync
     bool _updated;
@@ -148,8 +149,8 @@ private:
     void readStereoCameraFile(const string &fileNameP, StereoPair &stereoPair);
     void jumpLines(std::istream &input, int number);
 
-    geometry_msgs::Point stereopsis(cv::Point &tracked_point);
-    geometry_msgs::Point triangulationOpenCV(cv::Point &tracked_point_left, cv::Point &tracked_point_right);
+    geometry_msgs::PointStamped stereopsis(cv::Point &tracked_point);
+    geometry_msgs::PointStamped triangulationOpenCV(cv::Point &tracked_point_left, cv::Point &tracked_point_right);
 
     /*
      * Feature Extraction
@@ -187,7 +188,7 @@ private:
 
 
         //Calculate 3D
-        geometry_msgs::Point point3d;
+        geometry_msgs::PointStamped point3d;
         //Stereopsis
         point3d = stereopsis(tracked_point_left);
         //Matching
@@ -395,7 +396,7 @@ void SyncedImages::jumpLines(std::istream &input, int number)
  * @param tracked_point_right The point in the right image
  * @return The 3D point
  */
-geometry_msgs::Point SyncedImages::triangulationOpenCV(cv::Point &tracked_point_left, cv::Point &tracked_point_right)
+geometry_msgs::PointStamped SyncedImages::triangulationOpenCV(cv::Point &tracked_point_left, cv::Point &tracked_point_right)
 {
     //Correct format for the function
     cv::Mat pnts3D(1, 1, CV_64FC4);
@@ -416,10 +417,13 @@ geometry_msgs::Point SyncedImages::triangulationOpenCV(cv::Point &tracked_point_
     if (_view_messages) cout << "Normalized: " << pnts3D / pnts3D.at<double>(3, 0) << endl;
 
     //Normalize the point
-    geometry_msgs::Point point_geo_msg;
-    point_geo_msg.x = pnts3D.at<double>(0, 0) / pnts3D.at<double>(3, 0);
-    point_geo_msg.y = pnts3D.at<double>(1, 0) / pnts3D.at<double>(3, 0);
-    point_geo_msg.z = pnts3D.at<double>(2, 0) / pnts3D.at<double>(3, 0);
+    geometry_msgs::PointStamped point_geo_msg;
+    point_geo_msg.point.x = pnts3D.at<double>(0, 0) / pnts3D.at<double>(3, 0);
+    point_geo_msg.point.y = pnts3D.at<double>(1, 0) / pnts3D.at<double>(3, 0);
+    point_geo_msg.point.z = pnts3D.at<double>(2, 0) / pnts3D.at<double>(3, 0);
+
+    point_geo_msg.header.frame_id = "Camera";
+    point_geo_msg.header.stamp.sec = _wallTime.now().sec;
 
     return point_geo_msg;
 }
@@ -429,7 +433,7 @@ geometry_msgs::Point SyncedImages::triangulationOpenCV(cv::Point &tracked_point_
  * @param tracked_point The point of one of the images
  * @return The 3D point
  */
-geometry_msgs::Point SyncedImages::stereopsis(cv::Point &tracked_point)
+geometry_msgs::PointStamped SyncedImages::stereopsis(cv::Point &tracked_point)
 {
     //Copy the images
     Mat img_1, img_2;
@@ -601,13 +605,16 @@ geometry_msgs::Point SyncedImages::stereopsis(cv::Point &tracked_point)
     Mat avgM = M1 + (M2 - M1) / 2;
     cout << endl << "Average point: " << avgM << endl;
 
-    geometry_msgs::Point point_geo_msg;
-    point_geo_msg.x = avgM.at<double>(0, 0) / avgM.at<double>(3, 0);
-    point_geo_msg.y = avgM.at<double>(1, 0) / avgM.at<double>(3, 0);
-    point_geo_msg.z = avgM.at<double>(2, 0) / avgM.at<double>(3, 0);
+    geometry_msgs::PointStamped point_msg;
+    point_msg.point.x = avgM.at<double>(0, 0) / avgM.at<double>(3, 0);
+    point_msg.point.y = avgM.at<double>(1, 0) / avgM.at<double>(3, 0);
+    point_msg.point.z = avgM.at<double>(2, 0) / avgM.at<double>(3, 0);
+
+    point_msg.header.frame_id = "Camera";
+    point_msg.header.stamp.sec = _wallTime.now().sec;
 
 
-    return point_geo_msg;
+    return point_msg;
 }
 
 

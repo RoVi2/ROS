@@ -10,7 +10,7 @@
 
 //ROS
 #include <ros/ros.h>
-#include <geometry_msgs/Point.h>
+#include <geometry_msgs/PointStamped.h>
 
 //STD
 #include <iostream>
@@ -20,20 +20,24 @@ using namespace std;
 using namespace cv;
 
 //ROS Paths
-#define SUBSCRIBER "/balltracker/point"
+//#define SUBSCRIBER "/balltracker/point"
+#define SUBSCRIBER "/points_server/points"
 #define TOPIC "/kalman_filter/points"
 #define PARAM_DEBUGGING "/kalman_filter/debugging"
+#define PARAM_FRAME_RATE "/frame_rate"
 
-geometry_msgs::Point point_original;
+geometry_msgs::PointStamped point_original;
 #define KALMAN_RESET_WINDOW 10
 
 /**
  * Callback method to get the points from ROS
  */
-void getROSPoints(const geometry_msgs::PointConstPtr & point){
-	point_original.x = point->x;
-	point_original.y = point->y;
-	point_original.z = point->z;
+void getROSPoints(const geometry_msgs::PointStampedConstPtr & point){
+	point_original.header.frame_id = point->header.frame_id;
+	point_original.header.stamp = point->header.stamp;
+	point_original.point.x = point->point.x;
+	point_original.point.y = point->point.y;
+	point_original.point.z = point->point.z;
 }
 
 int main(int argc, char **argv)
@@ -49,14 +53,15 @@ int main(int argc, char **argv)
 	//Debugging parameter
 	bool debugging = false;
 	nh.setParam(PARAM_DEBUGGING, false);
+	int frame_rate = 1;
 
 	//Get a new image and store it in the globalImage
 	point_sub = nh.subscribe(SUBSCRIBER, 1, getROSPoints);
 
 	//Point to store the prediction
-	geometry_msgs::Point point_predicted;
+	geometry_msgs::PointStamped point_predicted;
 	//Publisher for the point
-	point_pub = nh.advertise<geometry_msgs::Point>(TOPIC, 1);
+	point_pub = nh.advertise<geometry_msgs::PointStamped>(TOPIC, 1);
 
 
 	//Kalman Filter
@@ -123,15 +128,12 @@ int main(int argc, char **argv)
 	bool found = false;
 	int notFoundCount = 0;
 
-	/*
-	 * Refresh frequency
-	 */
-	ros::Rate loop_rate(1);
-
 	while(ros::ok()){
 		//Check the creator wants to know that the hell is going on
 		ros::param::get(PARAM_DEBUGGING, debugging);
-
+		//Updates the frame rate
+		ros::param::get(PARAM_FRAME_RATE, frame_rate);
+		ros::Rate loop_rate(frame_rate);
 		/*
 		 * 1. Predict
 		 */
@@ -157,9 +159,11 @@ int main(int argc, char **argv)
 			state = kf.predict();
 
 			//Publish the points
-			point_predicted.x = state.at<float>(0);
-			point_predicted.y = state.at<float>(1);
-			point_predicted.z = state.at<float>(2);
+			point_predicted.point.x = state.at<float>(0);
+			point_predicted.point.y = state.at<float>(1);
+			point_predicted.point.z = state.at<float>(2);
+			point_predicted.header.frame_id = point_original.header.frame_id;
+			point_predicted.header.stamp = point_original.header.stamp;
 
 			point_pub.publish(point_predicted);
 
@@ -169,9 +173,11 @@ int main(int argc, char **argv)
 		else
 		{
 			//Reset the point
-			point_predicted.x = 0;
-			point_predicted.y = 0;
-			point_predicted.z = 0;
+			point_predicted.point.x = 0;
+			point_predicted.point.y = 0;
+			point_predicted.point.z = 0;
+			point_predicted.header.frame_id = point_original.header.frame_id;
+			point_predicted.header.stamp = point_original.header.stamp;
 			//Publish it
 			point_pub.publish(point_predicted);
 		}
@@ -179,13 +185,13 @@ int main(int argc, char **argv)
 		/*
 		 * 2. Get measurements
 		 */
-		geometry_msgs::Point point_measured = point_original;
+		geometry_msgs::PointStamped point_measured = point_original;
 
 		/*
 		 * 3. Update the Kalman Filter
 		 */
 		//Check if the point is bad
-		if (point_original.x == 0.0 && point_original.y == 0.0 && point_original.z == 0.0)
+		if (point_original.point.x == 0.0 && point_original.point.y == 0.0 && point_original.point.z == 0.0)
 		{
 			//This counts the number of frames we have lost the object
 			notFoundCount++;
@@ -204,9 +210,9 @@ int main(int argc, char **argv)
 		{
 			notFoundCount = 0;
 
-			meas.at<float>(0) = point_original.x;
-			meas.at<float>(1) = point_original.y;
-			meas.at<float>(2) = point_original.z;
+			meas.at<float>(0) = point_original.point.x;
+			meas.at<float>(1) = point_original.point.y;
+			meas.at<float>(2) = point_original.point.z;
 
 			if (!found) //First detection!
 			{

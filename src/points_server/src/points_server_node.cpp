@@ -5,7 +5,7 @@
 
 //ROS
 #include <ros/ros.h>
-#include <geometry_msgs/Point.h>
+#include <geometry_msgs/PointStamped.h>
 
 //STD
 #include <iostream>
@@ -17,7 +17,8 @@ using namespace std;
 //ROS Paths
 #define TOPIC "/points_server/points"
 #define PARAM_DEBUGGING "/points_server/debugging"
-#define FILE_PATH "../../../src/points_server/res/points.txt"
+#define PARAM_FRAME_RATE "/frame_rate"
+#define FILE_PATH "res/points.txt"
 
 int main(int argc, char **argv)
 {
@@ -32,31 +33,40 @@ int main(int argc, char **argv)
 	bool debugging = false;
 	nh.setParam(PARAM_DEBUGGING, false);
 
+	int frame_rate = 1;
+	nh.setParam(PARAM_FRAME_RATE, frame_rate);
+
 	//Point to store the prediction
-	geometry_msgs::Point point_file;
+	geometry_msgs::PointStamped point_file;
 	//Publisher for the point
-	point_pub = nh.advertise<geometry_msgs::Point>(TOPIC, 1);
+	point_pub = nh.advertise<geometry_msgs::PointStamped>(TOPIC, 1);
 
 	//File
 	ifstream file;
 	string line;
 	file.open(FILE_PATH);
 
-	if (file.is_open() && debugging) cout << "File found!" << endl;
+	if (!file.is_open()) cout << "File not found!" << endl;
 
-	/*
-	 * Refresh frequency
-	 */
-	ros::Rate loop_rate(1);
+	//WallTime
+	ros::WallTime walltime;
 
 	while(ros::ok() && file.is_open()){
+		//Debugging
 		ros::param::get(PARAM_DEBUGGING, debugging);
+		//Frame Rate
+		ros::param::get(PARAM_FRAME_RATE, frame_rate);
+		ros::Rate loop_rate(frame_rate);
+		//Get next line from the file
 		if (getline(file, line))
 		{
 			//Read a line and store its values
 			istringstream istr(line);
-			istr >> point_file.x >> point_file.y >> point_file.z;
-			if (debugging) cout << "X:" << point_file.x << " Y:" << point_file.y << " Z:" << point_file.z << endl;
+			istr >> point_file.point.x >> point_file.point.y >> point_file.point.z;
+			point_file.header.frame_id = "WORLD";
+			point_file.header.stamp.sec = walltime.now().sec;
+			if (debugging) cout << "X:" << point_file.point.x << " Y:" << point_file.point.y << " Z:" << point_file.point.z
+					<< " T: " << point_file.header.stamp << endl;
 			//And now we publish the point
 			point_pub.publish(point_file);
 
@@ -67,8 +77,7 @@ int main(int argc, char **argv)
 			file.clear();
 			file.seekg(0, ios::beg);
 		}
-		//And Spin!
-		ros::spinOnce();
+		//And sleep
 		loop_rate.sleep();
 	}
 	return 0;
