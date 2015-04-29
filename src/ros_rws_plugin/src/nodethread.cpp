@@ -13,7 +13,6 @@ using namespace rw::common;
 using namespace rw::models;
 using namespace rw::kinematics;
 using namespace rw::loaders;
-using namespace rwlibs::task;
 using namespace rw::invkin;
 
 using namespace std;
@@ -24,17 +23,21 @@ using namespace std;
 
 #define TOPIC "/points_server/points"
 
-NodeThread::NodeThread()
-{
-}
+geometry_msgs::PointStamped _point;
 
-NodeThread::NodeThread(WorkCell::Ptr workcell){WorkCell::Ptr
+/*NodeThread::NodeThread()
+{
+}*/
+
+NodeThread::NodeThread(WorkCell::Ptr workcell)
+{
 	//Get workcell
 	_workcell = workcell;
 
 	//Get device
 	_device = dynamic_cast<SerialDevice*>(_workcell->getDevices()[0].get());
 	ROS_INFO("Loaded device");
+
 }
 
 void NodeThread::callback(const geometry_msgs::PointStampedConstPtr & pointFromTopic){
@@ -62,7 +65,8 @@ void NodeThread::run()
     int argc = 1;
     char *argv[] = {const_cast<char *>("rwsplugin"), nullptr};
     ros::init(argc, argv, "rwsplugin_node");
-    _pointsSubscriber = _nodeHandle->subscribe(TOPIC, 1, &NodeThread::callback, this);
+    ros::NodeHandle nh;
+    //_pointsSubscriber = _nodeHandle.subscribe(TOPIC, 1, &NodeThread::callback, this);
 
 
     ros::Rate loop_rate(10);

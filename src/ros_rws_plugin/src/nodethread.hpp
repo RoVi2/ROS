@@ -16,7 +16,7 @@ class NodeThread : public QThread {
     Q_OBJECT
 
 public:
-    NodeThread();
+    //NodeThread();
     NodeThread(rw::models::WorkCell::Ptr workcell);
     void run() override;
     void callback(const geometry_msgs::PointStampedConstPtr & pointFromTopic);
@@ -28,10 +28,11 @@ private:
     ros::Subscriber _pointsSubscriber;
     geometry_msgs::PointStamped _point;
 
+    //Robwork
 	rw::models::WorkCell::Ptr _workcell;
-	rw::models::SerialDevice _device;
+	rw::models::SerialDevice::Ptr _device;
 	rw::kinematics::State _state;
-	rws::RobWorkStudio _rws;
+	rws::RobWorkStudio* _rws;
 };
 
 #endif // NODETHREAD_HPP
