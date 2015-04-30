@@ -5,3 +5,17 @@
 #Sublime
 *.sublime-project
 *.sublime-workspace
+
+#Latex
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.log
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.fuse*
+*.pdf
