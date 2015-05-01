@@ -3,8 +3,7 @@
 #include <ros/ros.h>
 
 #include "pa10plugin.h"
-#include "pa10_plugin/getJointConfig.h"
-#include "pa10_plugin/setJointConfig.h"
+#include "pa10_dummy/getJointConfig.h"
 
 RosNodeThread::RosNodeThread(QObject *parent)
     : QThread(parent)
@@ -19,9 +18,9 @@ void RosNodeThread::run()
     char *argv[] = {const_cast<char *>("pa10_plugin"), nullptr};
     ros::init(argc, argv, "pa10_plugin_node");
     ros::NodeHandle nh;
-    ros::ServiceClient sc_get_joint_conf = nh.serviceClient<pa10_plugin::getJointConfig>("pa10/getJointConfig");
+    ros::ServiceClient sc_get_joint_conf = nh.serviceClient<pa10_dummy::getJointConfig>("pa10/getJointConfig");
     ros::Rate loop_rate(3);
-    pa10_plugin::getJointConfig srv;
+    pa10_dummy::getJointConfig srv;
 
     while (nh.ok() && !stop_) {
         if (sc_get_joint_conf.call(srv)) {

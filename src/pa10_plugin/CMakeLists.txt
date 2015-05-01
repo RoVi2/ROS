@@ -1,28 +1,14 @@
 cmake_minimum_required(VERSION 2.8)
 project(pa10_plugin)
 
-# Find libraries.
+# Find packages.
 find_package(catkin REQUIRED COMPONENTS
     roscpp
     rospy
-    std_msgs
-    message_generation
+    pa10_dummy
 )
 find_package(RobWork REQUIRED)
 find_package(RobWorkStudio REQUIRED)
-
-# ROS service files.
-add_service_files(FILES
-    addToQueue.srv
-    clearJointQueue.srv
-    getJointConfig.srv
-    setJointConfig.srv
-    startPA10.srv
-    startQueue.srv
-)
-
-# Generate added messages and services.
-generate_messages(DEPENDENCIES std_msgs)
 
 catkin_package()
 
@@ -50,6 +36,6 @@ QT4_WRAP_UI(forms_headers ${forms})
 
 # Plugin target
 add_library(${PROJECT_NAME} MODULE ${sources} ${headers} ${headers_moc} ${forms_headers} ${resources_rcc})
-add_dependencies(${PROJECT_NAME} pa10_plugin_generate_messages_cpp)
+add_dependencies(${PROJECT_NAME} pa10_dummy)
 target_link_libraries(${PROJECT_NAME} ${QT_LIBRARIES} ${catkin_LIBRARIES} ${ROBWORK_LIBRARIES} ${ROBWORKSTUDIO_LIBRARIES})
 # install(TARGETS ros_rws_plugin RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

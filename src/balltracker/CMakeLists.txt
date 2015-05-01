@@ -20,7 +20,7 @@ catkin_package(
 )
 
 include_directories(
-  ${catkin_INCLUDE_DIRS}
+    ${catkin_INCLUDE_DIRS}
 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
@@ -30,5 +30,5 @@ add_executable(balltracker_node src/balltracker_node.cpp)
 
 target_link_libraries(balltracker_node
     ${catkin_LIBRARIES}
-    ${OpenCV_LIBS}
+    ${OpenCV_LIBRARIES}
 )
