@@ -36,11 +36,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall") # -pedantic
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2") # -Wextra -Werror
 
 # Files
-set(sources ${CMAKE_CURRENT_SOURCE_DIR}/src/pa10plugin.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/nodethread.cpp)
-set(headers ${CMAKE_CURRENT_SOURCE_DIR}/src/pa10plugin.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/nodethread.h)
-set(forms ${CMAKE_CURRENT_SOURCE_DIR}/ui/pa10plugin.ui)
+set(sources src/pa10plugin.cpp
+            src/rosnodethread.cpp)
+set(headers src/pa10plugin.h
+            src/rosnodethread.h)
+set(forms ui/pa10plugin.ui)
 # set(resources ${CMAKE_CURRENT_SOURCE_DIR}/resources/*.qrc)
 
 # Qt4 pre-processing
@@ -49,7 +49,7 @@ QT4_WRAP_UI(forms_headers ${forms})
 # QT4_ADD_RESOURCES(resources_rcc ${resources})
 
 # Plugin target
-add_library(pa10_plugin MODULE ${sources} ${headers} ${headers_moc} ${forms_headers} ${resources_rcc})
-add_dependencies(pa10_plugin pa10_plugin_generate_messages_cpp)
-target_link_libraries(pa10_plugin ${QT_LIBRARIES} ${catkin_LIBRARIES} ${ROBWORK_LIBRARIES} ${ROBWORKSTUDIO_LIBRARIES})
+add_library(${PROJECT_NAME} MODULE ${sources} ${headers} ${headers_moc} ${forms_headers} ${resources_rcc})
+add_dependencies(${PROJECT_NAME} pa10_plugin_generate_messages_cpp)
+target_link_libraries(${PROJECT_NAME} ${QT_LIBRARIES} ${catkin_LIBRARIES} ${ROBWORK_LIBRARIES} ${ROBWORKSTUDIO_LIBRARIES})
 # install(TARGETS ros_rws_plugin RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

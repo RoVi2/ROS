@@ -4,68 +4,95 @@
 #include <rw/models/WorkCell.hpp>
 #include <rws/RobWorkStudio.hpp>
 
-#include "nodethread.h"
+#include "rosnodethread.h"
 
-using namespace rw::models;
+using namespace rw::common;
 using namespace rw::kinematics;
+using namespace rw::math;
+using namespace rw::models;
 
-Q_EXPORT_PLUGIN2(pa10_plugin, Pa10Plugin)
+Q_EXPORT_PLUGIN2(pa10_plugin, PA10Plugin)
 
-Pa10Plugin::Pa10Plugin()
+PA10Plugin::PA10Plugin()
     : RobWorkStudioPlugin("Pa10Plugin", QIcon())
-    , ui_(new Ui::Pa10Plugin)
-    , nodeThread_(new NodeThread)
+    , ui_(new Ui::PA10Plugin)
+    , rosThread_(new RosNodeThread)
 {
     ui_->setupUi(this);
+    qRegisterMetaType<Q>();
+    qRegisterMetaType<std::string>();
+    qRegisterMetaType<Log::LogIndex>();
 }
 
-Pa10Plugin::~Pa10Plugin()
+PA10Plugin::~PA10Plugin()
 {
-    if (nodeThread_) {
-        nodeThread_->stop();
-        nodeThread_->wait();
-        delete nodeThread_;
+    if (rosThread_) {
+        rosThread_->stop();
+        rosThread_->wait();
+        delete rosThread_;
     }
 
     delete ui_;
 }
 
-void Pa10Plugin::initialize()
+void PA10Plugin::initialize()
 {
     // Listen for changes to the workcell kinematics tree.
-    getRobWorkStudio()->stateChangedEvent().add(boost::bind(&Pa10Plugin::stateChangedListener, this, _1), this);
+    getRobWorkStudio()->stateChangedEvent().add(boost::bind(&PA10Plugin::stateChangedListener, this, _1), this);
 
-    // Connect UI
-    QObject::connect(ui_->btnTest, SIGNAL(pressed()), this, SLOT(test()));
-    QObject::connect(nodeThread_, SIGNAL(logMsg()), this, SLOT(rwsLogWrite()));
+    // Connect UI.
+    connect(ui_->btnTest, SIGNAL(pressed()), this, SLOT(test()));
 
+    // Connect ROS node thread.
+    connect(rosThread_, SIGNAL(rwsLogMsg(std::string, rw::common::Log::LogIndex)),
+            this, SLOT(rwsLogWrite(std::string, rw::common::Log::LogIndex)));
+    connect(rosThread_, SIGNAL(qUpdated(rw::math::Q)),
+            this, SLOT(setPA10Config(rw::math::Q)));
 }
 
-void Pa10Plugin::open(WorkCell *workcell)
+void PA10Plugin::open(WorkCell *workcell)
 {
     if (!workcell) {
         return;
     }
 
-    nodeThread_->start();
+    pa10_ = workcell->findDevice("PA10").scast<SerialDevice>();
+
+    if (!pa10_) {
+        log().warning() << "PA10 device not found in workcell.";
+        return;
+    }
+
+    rosThread_->start();
 }
 
-void Pa10Plugin::close()
+void PA10Plugin::close()
 {
-    nodeThread_->stop();
+    rosThread_->stop();
 }
 
-void Pa10Plugin::rwsLogWrite(std::string msg, rw::common::Log::LogIndex logIdx)
+void PA10Plugin::setPA10Config(Q q)
+{
+    if (!pa10_) {
+        return;
+    }
+
+    State state;
+    pa10_->setQ(q, state);
+    getRobWorkStudio()->setState(state);
+}
+
+void PA10Plugin::rwsLogWrite(std::string msg, rw::common::Log::LogIndex logIdx)
 {
     log().get(logIdx).write(msg);
 }
 
-void Pa10Plugin::stateChangedListener(State const &state)
+void PA10Plugin::stateChangedListener(State const &state)
 {
     state_ = state;
 }
 
-void Pa10Plugin::test()
+void PA10Plugin::test()
 {
     log().info() << "Test button pressed!\n";
 }

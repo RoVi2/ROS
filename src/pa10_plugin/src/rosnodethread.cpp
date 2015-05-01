@@ -1,4 +1,4 @@
-#include "nodethread.h"
+#include "rosnodethread.h"
 
 #include <ros/ros.h>
 
@@ -6,16 +6,16 @@
 #include "pa10_plugin/getJointConfig.h"
 #include "pa10_plugin/setJointConfig.h"
 
-NodeThread::NodeThread(QObject *parent)
+RosNodeThread::RosNodeThread(QObject *parent)
     : QThread(parent)
 {
 }
 
-void NodeThread::run()
+void RosNodeThread::run()
 {
     stop_ = false;
 
-    emit logMsg("Listener node starting...", rw::common::Log::LogIndex::Info);
+    emit rwsLogMsg("Listener node starting...", rw::common::Log::LogIndex::Info);
 
     int argc = 1;
     char *argv[] = {const_cast<char *>("pa10plugin"), nullptr};
@@ -47,10 +47,10 @@ void NodeThread::run()
         loop_rate.sleep();
     }
 
-    emit logMsg("Listener node stopping...", rw::common::Log::LogIndex::Info);
+    emit rwsLogMsg("Listener node stopping...", rw::common::Log::LogIndex::Info);
 }
 
-void NodeThread::stop()
+void RosNodeThread::stop()
 {
     stop_ = true;
 }
