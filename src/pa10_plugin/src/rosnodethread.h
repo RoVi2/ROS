@@ -1,6 +1,8 @@
 #ifndef ROSNODETHREAD_H
 #define ROSNODETHREAD_H
 
+#include <atomic>
+
 #include <QThread>
 
 #include <rw/common/Log.hpp>
@@ -17,10 +19,10 @@ public:
 
 signals:
     void qUpdated(rw::math::Q q);
-    void rwsLogMsg(std::string msg, rw::common::Log::LogIndex logIdx);
+    void rwsLogMsg(std::string msg, rw::common::Log::LogIndex log_idx);
 
 private:
-    bool stop_;
+    std::atomic<bool> stop_;
 };
 
 #endif // ROSNODETHREAD_H

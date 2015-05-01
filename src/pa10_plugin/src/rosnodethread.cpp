@@ -14,23 +14,17 @@ RosNodeThread::RosNodeThread(QObject *parent)
 void RosNodeThread::run()
 {
     stop_ = false;
-
-    emit rwsLogMsg("Listener node starting...", rw::common::Log::LogIndex::Info);
-
+    emit rwsLogMsg("ROS node starting...\n", rw::common::Log::LogIndex::Info);
     int argc = 1;
-    char *argv[] = {const_cast<char *>("pa10plugin"), nullptr};
-    ros::init(argc, argv, "pa10plugin_node");
+    char *argv[] = {const_cast<char *>("pa10_plugin"), nullptr};
+    ros::init(argc, argv, "pa10_plugin_node");
     ros::NodeHandle nh;
-    //_pointsSubscriber = _nodeHandle.subscribe(TOPIC, 1, &NodeThread::callback, this);
-
-    // ros::ServiceClient scSetJointConfig = nh.serviceClient<pa10_plugin::setJointConfig>("pa10/setJointsConfig");
-    ros::ServiceClient scGetJointConfig = nh.serviceClient<pa10_plugin::getJointConfig>("pa10/getJointConfig");
-    ros::Rate loop_rate(60);
+    ros::ServiceClient sc_get_joint_conf = nh.serviceClient<pa10_plugin::getJointConfig>("pa10/getJointConfig");
+    ros::Rate loop_rate(3);
     pa10_plugin::getJointConfig srv;
 
-
     while (nh.ok() && !stop_) {
-        if (scGetJointConfig.call(srv)) {
+        if (sc_get_joint_conf.call(srv)) {
             std::size_t n = srv.response.positions.size();
             rw::math::Q q(n);
 
@@ -47,7 +41,7 @@ void RosNodeThread::run()
         loop_rate.sleep();
     }
 
-    emit rwsLogMsg("Listener node stopping...", rw::common::Log::LogIndex::Info);
+    emit rwsLogMsg("ROS node stopping...\n", rw::common::Log::LogIndex::Info);
 }
 
 void RosNodeThread::stop()

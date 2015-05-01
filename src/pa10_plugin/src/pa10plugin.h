@@ -27,7 +27,7 @@ public:
 
 public slots:
     void setPA10Config(rw::math::Q q);
-    void rwsLogWrite(std::string msg, rw::common::Log::LogIndex logIdx);
+    void rwsLogWrite(std::string msg, rw::common::Log::LogIndex log_idx);
 
 private slots:
     void stateChangedListener(rw::kinematics::State const &state);
@@ -35,7 +35,7 @@ private slots:
 
 private:
     Ui::PA10Plugin *ui_;
-    RosNodeThread *rosThread_;
+    RosNodeThread *ros_thread_;
     rw::kinematics::State state_;
     rw::models::SerialDevice::Ptr pa10_;
 };
