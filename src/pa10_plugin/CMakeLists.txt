@@ -1,14 +1,44 @@
 cmake_minimum_required(VERSION 2.8)
 project(pa10_plugin)
 
+SET(RW_ROOT "$ENV{RW_ROOT}")
+SET(RWSTUDIO_ROOT "$ENV{RWS_ROOT}")
+
 # Find packages.
 find_package(catkin REQUIRED COMPONENTS
     roscpp
     rospy
     pa10_dummy
 )
-find_package(RobWork REQUIRED)
-find_package(RobWorkStudio REQUIRED)
+
+#Include default settings for constructing a robwork dependent project
+FIND_PACKAGE(
+  RobWork
+  QUIET
+  HINTS
+    "${RW_ROOT}")
+#The following is a workaround for the old version of RobWork. Remove once no longer needed (everyone switched to a RobWork version newer than April 2012)
+IF(NOT ROBWORK_FOUND)
+  MESSAGE(STATUS "Could not find RobWork with the new method. Trying the old one.")
+  INCLUDE(${RW_ROOT}/build/FindRobWork.cmake)
+ENDIF(NOT ROBWORK_FOUND)
+
+#Include default settings for constructing a robworkst dependent project
+FIND_PACKAGE(
+  RobWorkStudio
+  QUIET
+  HINTS
+    "${RWSTUDIO_ROOT}")
+#The following is a workaround for the old version of RobWorkSt. Remove once no longer needed (everyone switched to a RobWork version newer than April 2012)
+IF(NOT ROBWORKSTUDIO_FOUND)
+  MESSAGE(STATUS "Could not find RobWorkStudio with the new method. Trying the old one.")
+  INCLUDE(${RWSTUDIO_ROOT}/build/FindRobWorkStudio.cmake)
+ENDIF(NOT ROBWORKSTUDIO_FOUND)
+
+INCLUDE_DIRECTORIES( ${ROBWORK_INCLUDE_DIRS} ${ROBWORKSTUDIO_INCLUDE_DIRS} )
+LINK_DIRECTORIES( ${ROBWORK_LIBRARY_DIRS} ${ROBWORKSTUDIO_LIBRARY_DIRS} ${catkin_LIBRARIES})
+
+
 
 catkin_package()
 

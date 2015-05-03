@@ -2,6 +2,9 @@
 /build
 /devel
 
+#Qt
+.user
+
 #Sublime
 *.sublime-project
 *.sublime-workspace
