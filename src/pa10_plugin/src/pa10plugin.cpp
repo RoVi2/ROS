@@ -56,7 +56,7 @@ void PA10Plugin::open(WorkCell *workcell)
     }
 
     state_ = workcell->getDefaultState();
-    pa10_ = workcell->findDevice("PA10").cast<SerialDevice>();
+    pa10_ = workcell->findDevice("PA10").scast<SerialDevice>();
 
     if (!pa10_ || pa10_->getDOF() != 7) {
         log().warning() << "PA10 device not found in workcell.\n";
