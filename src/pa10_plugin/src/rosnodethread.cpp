@@ -21,12 +21,11 @@ void RosNodeThread::run()
     ros::init(argc, argv, "pa10_plugin_node");
     ros::NodeHandle nh;
     ros::ServiceClient sc_get_joint_conf = nh.serviceClient<pa10_dummy::getJointConfig>("pa10/getJointConfig");
-    
     int frame_rate = 1;
     pa10_dummy::getJointConfig srv;
 
     while (nh.ok() && !stop_) {
-        //Get the globar frame rate
+        // Get the global frame rate
         ros::param::get(PARAM_FRAME_RATE, frame_rate);
         ros::Rate loop_rate(frame_rate);
 
