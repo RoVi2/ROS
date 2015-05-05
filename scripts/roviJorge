@@ -2,7 +2,7 @@
 
 # Roscore
 xterm -e "roscore" &
-sleep 1
+sleep 2
 #PA10
 xterm -e "rosrun pa10_dummy pa10_dummy" &
 sleep 0.1

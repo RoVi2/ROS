@@ -41,7 +41,8 @@ using namespace rwlibs::proximitystrategies;
 #define ROBOT_NAME "PA10"
 
 //ROS Paths
-#define SUBSCRIBER "/points_server/points"
+//#define SUBSCRIBER "/points_server/points"
+#define SUBSCRIBER "/kalman_filter/points"
 #define TOPIC "/path_planning/Q"
 #define PARAM_DEBUGGING "/path_planning/debugging"
 #define PARAM_FRAME_RATE "/frame_rate"
@@ -82,7 +83,7 @@ int main(int argc, char** argv)
 	bool debugging = true;
 	int frame_rate;
 	double spline_path_dt = 3; //DONT PUT 1 OR LESS
-	double step_dt = 0.5;
+    double step_dt = 0.8;
 
 	nh.setParam(PARAM_DEBUGGING, true);
 	nh.setParam(PARAM_SPLINE_PATH_DT, spline_path_dt);
@@ -152,7 +153,7 @@ int main(int argc, char** argv)
 		 * Obtains the Desired Q
 		 */
 		//Translate the kalman point from the camera to the robot's base
-		if (debugging) cout << GREEN "Point from: " RESET << endl;
+        if (debugging) cout << endl << GREEN "New Point from: " RESET << endl;
 		if (debugging) cout << GREEN"	Camera: " RESET << point_kalman << endl;
 		point_kalman = (device->baseTframe(wc->findFrame("Camera"), state)) * point_kalman;
 		if (debugging) cout << GREEN"	Base: " RESET << point_kalman << endl;
@@ -203,7 +204,7 @@ int main(int argc, char** argv)
 				Q_current[joint] = srv_getJointConfig.response.positions[joint]*Deg2Rad;
 
 			//Calculate the path from the current Q to the desired Q and show the calculation time
-			if (debugging) cout << YELLOW "Planning from " << Q_current << " to " << qVectorSolutionIK[0] << ":" RESET << endl;
+            if (debugging) cout << YELLOW "    Planning from " << Q_current << " to " << qVectorSolutionIK[0] << ":" RESET << endl;
 			Timer calculationTime;
 			calculationTime.resetAndResume();
 			planner->query(Q_current, qVectorSolutionIK[0], pathToDesiredQ);
@@ -228,12 +229,11 @@ int main(int argc, char** argv)
 
 					/*
 					 * Maybe problems with sending too many Q? This is your place!
-					 *
-					Timer waitUntilRobot;
-					waitUntilRobot.resetAndResume();
-					while (waitUntilRobot.getTimeMs() <= 200)
-						; //Do nothing
-					*/
+                     */
+                    Timer waitUntilRobot;
+                    waitUntilRobot.resetAndResume();
+                    while (waitUntilRobot.getTimeMs() <= 100)
+                        ; //Do nothing
 				}
 				else if (debugging) ROS_ERROR("Robot not found");
 			}

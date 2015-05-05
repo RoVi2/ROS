@@ -31,7 +31,6 @@ public slots:
 
 private slots:
     void stateChangedListener(rw::kinematics::State const &state);
-    void test();
 
 private:
     Ui::PA10Plugin *ui_;
