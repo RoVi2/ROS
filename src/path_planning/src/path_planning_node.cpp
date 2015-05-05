@@ -56,9 +56,6 @@ using namespace rwlibs::proximitystrategies;
 #define MAGENTA "\e[35m"
 #define CYAN "\e[36m"
 
-//
-
-
 //Global variables
 Vector3D<double> point_kalman;
 
@@ -80,7 +77,6 @@ int main(int argc, char** argv)
 	ros::init(argc, argv, "path_planning_node");
 	ros::NodeHandle nh;
 	ros::Subscriber point_sub;
-	ros::Publisher Q_pub;
 
 	//Parameters
 	bool debugging = true;

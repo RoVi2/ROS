@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Roscore
+xterm -e "roscore" &
+sleep 1
+#PA10
+xterm -e "rosrun pa10_dummy pa10_dummy" &
+sleep 0.1
+#Points server
+cd ~/RoVi/src/points_server
+xterm -e "rosrun points_server points_server_node" &
+sleep 0.1
+#Kalman Node
+xterm -e "rosrun kalman_filter kalman_filter_node" &
+sleep 0.1
+
+#Robworkstudio Cell
+cd ~
+exec robworkstudiocell
+sleep 0.1
+
+exit 0

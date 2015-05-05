@@ -3,7 +3,7 @@
 /devel
 
 #Qt
-.user
+*.user
 
 #Sublime
 *.sublime-project

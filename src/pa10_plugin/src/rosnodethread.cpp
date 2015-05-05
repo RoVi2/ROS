@@ -28,7 +28,7 @@ void RosNodeThread::run()
     while (nh.ok() && !stop_) {
         //Get the globar frame rate
         ros::param::get(PARAM_FRAME_RATE, frame_rate);
-        ros::Rate loop_rate(frame_rate);
+        ros::Rate loop_rate(frame_rate*7);
 
         if (sc_get_joint_conf.call(srv)) {
             std::size_t n = srv.response.positions.size();
