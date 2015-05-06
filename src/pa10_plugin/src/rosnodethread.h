@@ -6,7 +6,7 @@
 #include <QThread>
 
 #include <rw/common/Log.hpp>
-#include <rw/math/Q.hpp>
+#include <rw/math.hpp>
 
 class RosNodeThread : public QThread
 {
@@ -23,6 +23,8 @@ public slots:
 
 signals:
     void qUpdated(rw::math::Q q);
+    void ballPredictedUpdated(rw::math::Transform3D<> transformation);
+    void ballDetectedUpdated(rw::math::Transform3D<> transformation);
     void rwsLogMsg(std::string msg, rw::common::Log::LogIndex log_idx);
 
 private:

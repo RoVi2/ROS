@@ -39,13 +39,21 @@
 		<Box x="0.05" y="0.05" z="0.15" />
 	</Drawable>
 
-	<Frame name="Ball" refframe="CameraSim" type="Movable">
+	<Frame name="BallPredicted" refframe="Camera" type="Movable">
 		<RPY>0 0 0</RPY>
-		<Pos>0 0 -0.2</Pos>
+		<Pos>0 0 0</Pos>
 		<Drawable name="BallGeo">
-			<Polytope file="Geometry/ball" />
+			<Polytope file="Geometry/ballPredicted" />
 		</Drawable>
 	</Frame>
+
+ 	<Frame name="BallDetected" refframe="Camera" type="Movable">
+		<RPY>0 0 0</RPY>
+		<Pos>0 0 0</Pos>
+		<Drawable name="BallGeo">
+			<Polytope file="Geometry/ballDetected" />
+		</Drawable>
+	</Frame> 
 
 	<!--Frame name="MarkerTexture" refframe="Marker">
 		<RPY>180 0 0</RPY>
