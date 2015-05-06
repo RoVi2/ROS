@@ -13,7 +13,8 @@ sleep 0.1
 #Kalman Node
 xterm -e "rosrun kalman_filter kalman_filter_node" &
 sleep 0.1
-#Path Pslanning
+#Path Planning
+cd ~/RoVi/src/path_planning
 xterm -e "rosrun path_planning path_planning_node" &
 sleep 0.1
 
