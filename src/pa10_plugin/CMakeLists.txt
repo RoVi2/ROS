@@ -6,17 +6,22 @@ SET(RWSTUDIO_ROOT "$ENV{RWS_ROOT}")
 
 # Find packages.
 find_package(catkin REQUIRED COMPONENTS
-    roscpp
-    rospy
-    pa10_dummy
+	roscpp
+	rospy
+	sensor_msgs
+	std_msgs
+	cv_bridge
+	image_transport
+	pa10_dummy
 )
+find_package(OpenCV REQUIRED)
 
 #Include default settings for constructing a robwork dependent project
 FIND_PACKAGE(
   RobWork
   QUIET
   HINTS
-    "${RW_ROOT}")
+	"${RW_ROOT}")
 #The following is a workaround for the old version of RobWork. Remove once no longer needed (everyone switched to a RobWork version newer than April 2012)
 IF(NOT ROBWORK_FOUND)
   MESSAGE(STATUS "Could not find RobWork with the new method. Trying the old one.")
@@ -28,7 +33,7 @@ FIND_PACKAGE(
   RobWorkStudio
   QUIET
   HINTS
-    "${RWSTUDIO_ROOT}")
+	"${RWSTUDIO_ROOT}")
 #The following is a workaround for the old version of RobWorkSt. Remove once no longer needed (everyone switched to a RobWork version newer than April 2012)
 IF(NOT ROBWORKSTUDIO_FOUND)
   MESSAGE(STATUS "Could not find RobWorkStudio with the new method. Trying the old one.")
@@ -39,18 +44,23 @@ catkin_package()
 
 # Search directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-include_directories(${catkin_INCLUDE_DIRS} ${ROBWORKSTUDIO_INCLUDE_DIRS} ${ROBWORK_INCLUDE_DIRS})
+include_directories(${catkin_INCLUDE_DIRS}
+					${ROBWORKSTUDIO_INCLUDE_DIRS}
+					${ROBWORK_INCLUDE_DIRS}
+					${OpenCV_INCLUDE_DIRS})
 link_directories(${ROBWORK_LIBRARY_DIRS} ${ROBWORKSTUDIO_LIBRARY_DIRS})
 
 # Compiler flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall") # -pedantic
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2") # -Wextra -Werror
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3") # -Wextra -Werror
 
 # Files
 set(sources src/pa10plugin.cpp
-            src/rosnodethread.cpp)
+			src/rosnodethread.cpp
+			src/rosnodethreadimages.cpp)
 set(headers src/pa10plugin.h
-            src/rosnodethread.h)
+			src/rosnodethread.h
+			src/rosnodethread.h)
 set(forms ui/pa10plugin.ui)
 # set(resources ${CMAKE_CURRENT_SOURCE_DIR}/resources/*.qrc)
 
@@ -62,5 +72,11 @@ QT4_WRAP_UI(forms_headers ${forms})
 # Plugin target
 add_library(${PROJECT_NAME} MODULE ${sources} ${headers} ${headers_moc} ${forms_headers} ${resources_rcc})
 add_dependencies(${PROJECT_NAME} pa10_dummy)
-target_link_libraries(${PROJECT_NAME} ${QT_LIBRARIES} ${catkin_LIBRARIES} ${ROBWORK_LIBRARIES} ${ROBWORKSTUDIO_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}
+						${QT_LIBRARIES}
+						${catkin_LIBRARIES}
+						${ROBWORK_LIBRARIES}
+						${ROBWORKSTUDIO_LIBRARIES}
+						${OpenCV_LIBRARIES}
+						)
 # install(TARGETS ros_rws_plugin RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
