@@ -12,8 +12,8 @@
 #include <opencv2/opencv.hpp>
 
 #define PARAM_FRAME_RATE "/frame_rate"
-#define LEFT_IMAGE_TOPIC "/kalman_filter/points"
-#define RIGHT_IMAGE_TOPIC "/points_server/points"
+#define LEFT_IMAGE_TOPIC "/monocamera_camera/image"
+#define RIGHT_IMAGE_TOPIC "/monocamera_camera/image"
 
 using namespace cv;
 
