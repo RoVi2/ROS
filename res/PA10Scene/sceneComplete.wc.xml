@@ -12,7 +12,7 @@
 	</Frame>
 
 	<Frame name="Robot" refframe="Foot">
-		<RPY> -90 0 0 </RPY>
+		<RPY> -155 0 0 </RPY>
 		<Pos>0 0.0 0.815</Pos>
 	</Frame>
 	<Include file="PA10/pa10.xml" />
@@ -23,7 +23,7 @@
 	</Frame>
 
 	<Frame name="Camera" refframe="Tool">
-		<RPY>0 0 0</RPY>
+		<RPY>0 90 0</RPY>
 		<Pos>0 0 0.055</Pos>
 	</Frame>
 	

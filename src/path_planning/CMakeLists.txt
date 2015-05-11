@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   std_msgs
 	roscpp
+  pa10controller
 )
 
 ## System dependencies are found with CMake's conventions
@@ -51,15 +52,15 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-add_service_files(
-	FILES
-	addToQueue.srv 
-	clearJointQueue.srv 
-	getJointConfig.srv
-	setJointConfig.srv
-	startPA10.srv
-	startQueue.srv
-)
+# add_service_files(
+# 	FILES
+# 	addToQueue.srv 
+# 	clearJointQueue.srv 
+# 	getJointConfig.srv
+# 	setJointConfig.srv
+# 	startPA10.srv
+# 	startQueue.srv
+# )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -165,7 +166,8 @@ set(ROS_BUILD_SHARED_LIBS true)
 
 ## Declare a cpp executable
 add_executable(path_planning_node src/path_planning_node.cpp)
-add_dependencies(path_planning_node path_planning_generate_messages_cpp)
+#add_dependencies(path_planning_node path_planning_generate_messages_cpp)
+add_dependencies(path_planning_node pa10controller)
 target_link_libraries(path_planning_node ${catkin_LIBRARIES} ${ROBWORK_LIBRARIES})
 
 list(APPEND CMAKE_CXX_FLAGS "-std=c++0x  -g -O3 -ftest-coverage -fprofile-arcs")

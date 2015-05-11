@@ -19,10 +19,14 @@
 #include <geometry_msgs/PointStamped.h>
 
 //Services
-#include <path_planning/getJointConfig.h>
+/*#include <path_planning/getJointConfig.h>
 #include <path_planning/setJointConfig.h>
 #include <path_planning/addToQueue.h>
-#include <path_planning/addToQueue.h>
+#include <path_planning/addToQueue.h>*/
+ #include <pa10controller/getJointConfig.h>
+#include <pa10controller/setJointConfig.h>
+#include <pa10controller/addToQueue.h>
+#include <pa10controller/addToQueue.h>
 
 using namespace std;
 using namespace rw::common;
@@ -48,6 +52,8 @@ using namespace rwlibs::proximitystrategies;
 #define PARAM_PATH_NOT_FOUND_TIME_LIMIT "/path_planning/path_not_found_time_limit"
 #define PARAM_SPLINE_PATH_DT "/path_planning/spline_path_dt" //
 #define PARAM_STEP_DT "/path_planning/step_dt" //For each time steps, how many times we split the path in
+#define SRV_GET_JOINT "/getJointConfig"
+#define SRV_SET_JOINT "/setJointsConfig"
 
 //Colors
 #define RESET "\e[m"
@@ -77,7 +83,7 @@ void callBack(const geometry_msgs::PointStampedConstPtr & point_ros){
  */
 void sendRobotToQ(rw::math::Q & Q_desired,
 		ros::ServiceClient & client_setJointConfig,
-		path_planning::setJointConfig & srv_setJointConfig,
+		pa10controller::setJointConfig & srv_setJointConfig,
 		bool & debugging){
 	//Copy the joint values in to the service message
 	for (unsigned char joint=0; joint<7; joint++)
@@ -95,7 +101,7 @@ void sendRobotToQ(rw::math::Q & Q_desired,
 		 */
 		Timer waitUntilRobot;
 		waitUntilRobot.resetAndResume();
-		while (waitUntilRobot.getTimeMs() <= 500)
+		while (waitUntilRobot.getTimeMs() <= 1500)
 			; //Do nothing
 	}
 	else if (debugging) ROS_ERROR("Robot not found");
@@ -132,10 +138,10 @@ int main(int argc, char** argv)
 	point_sub = nh.subscribe(SUBSCRIBER, 1,  callBack);
 
 	//Services
-	ros::ServiceClient client_getJointConfig = nh.serviceClient<path_planning::getJointConfig>("pa10/getJointConfig");
-	ros::ServiceClient client_setJointConfig = nh.serviceClient<path_planning::setJointConfig>("pa10/setJointsConfig");
-	path_planning::getJointConfig srv_getJointConfig;
-	path_planning::setJointConfig srv_setJointConfig;
+	ros::ServiceClient client_getJointConfig = nh.serviceClient<pa10controller::getJointConfig>(SRV_GET_JOINT);
+	ros::ServiceClient client_setJointConfig = nh.serviceClient<pa10controller::setJointConfig>(SRV_SET_JOINT);
+	pa10controller::getJointConfig srv_getJointConfig;
+	pa10controller::setJointConfig srv_setJointConfig;
 
 	/*
 	 * RobWork
@@ -149,7 +155,7 @@ int main(int argc, char** argv)
 
 	//Obtain the current state and position of the real robot
 	State state = wc->getDefaultState();
-	Q Q_home = Q(7, 0,-0.65,0,1.8,0,0.42,0);
+	Q Q_ready = Q(7, 1.14, -0.65, 0, 1.8, 0, -0.96, 0.9);
 	Q Q_current(7, 0,0,0,0,0,0,0);
 	Timer pathNotFoundTimer;
 	int pathNotFoundTimeLimit = 10;
@@ -162,8 +168,10 @@ int main(int argc, char** argv)
 	QToQPlanner::Ptr planner = RRTPlanner::makeQToQPlanner(constraint, sampler, metric, extend, RRTPlanner::RRTConnect);
 
 	//Going home
-	sendRobotToQ(Q_home, client_setJointConfig, srv_setJointConfig, debugging);
-	device->setQ(Q_home, state);
+	sendRobotToQ(Q_ready, client_setJointConfig, srv_setJointConfig, debugging);
+	device->setQ(Q_ready, state);
+
+	cout << RPY<double>( (device->baseTframe(wc->findFrame("Camera"), state) ).R()) << endl;
 
 	/*
 	 * Loop!
@@ -203,14 +211,14 @@ int main(int argc, char** argv)
 		Vector3D<double> point_kalman_polar (radius, angle, height);
 		if (debugging) cout << GREEN"	and in Polar: " RESET << point_kalman_polar << endl;
 		//The camera position will be 0.5 meters from the kalman point in the radial direction
-		Vector3D<double> camera_position_polar = point_kalman_polar - Vector3D<double>(0.75,0,0);
+		Vector3D<double> camera_position_polar = point_kalman_polar - Vector3D<double>(0.5,0,0);
 		Vector3D<double> camera_position (
 				camera_position_polar[0]*cos(camera_position_polar[1]), //r*cos(angle)
 				camera_position_polar[0]*sin(camera_position_polar[1]), //r*sin(angle)
 				camera_position_polar[2] //height
 		);
 		//The rotation has to be that which is oriented to the point.
-		RPY<double> cameraRotation = RPY<> (-1.571+angle, 0, -1.571);
+		RPY<double> cameraRotation = RPY<> (1.57, 0, 0);
 		//So the transformation matrix is created with the translation and the rotation matrices
 		Transform3D<double> cameraTransfomationMatrix = Transform3D<double>(camera_position, cameraRotation.toRotation3D());
 		if (debugging) cout << GREEN"	Position for Camera: " RESET << cameraTransfomationMatrix.P() << endl;
@@ -260,7 +268,7 @@ int main(int argc, char** argv)
 				if (debugging) cout << MAGENTA "Not solution found. Reset in: " << pathNotFoundTimer.getTimeSec() << "/" << pathNotFoundTimeLimit << RESET<< endl << endl;
 				//If we don't find a solution over the time limit, we go back to home
 				if (pathNotFoundTimer.getTimeSec()>=pathNotFoundTimeLimit){
-					sendRobotToQ(Q_home, client_setJointConfig, srv_setJointConfig, debugging);
+					sendRobotToQ(Q_ready, client_setJointConfig, srv_setJointConfig, debugging);
 					pathNotFoundTimer.reset();
 					if (debugging) ROS_WARN("Robot going home");
 				}
@@ -270,8 +278,8 @@ int main(int argc, char** argv)
 			if (debugging) cout << MAGENTA "Not solution found. Reset in: " << pathNotFoundTimer.getTimeSec() << "/" << pathNotFoundTimeLimit << RESET<< endl << endl;
 			//If we don't find a solution over the time limit, we go back to home
 			if (pathNotFoundTimer.getTimeSec()>=pathNotFoundTimeLimit){
-				sendRobotToQ(Q_home, client_setJointConfig, srv_setJointConfig, debugging);
-				device->setQ(Q_home, state);
+				sendRobotToQ(Q_ready, client_setJointConfig, srv_setJointConfig, debugging);
+				device->setQ(Q_ready, state);
 				pathNotFoundTimer.reset();
 				if (debugging) ROS_WARN("Robot going home");
 			}

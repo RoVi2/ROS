@@ -9,6 +9,8 @@
 #define PARAM_FRAME_RATE "/frame_rate"
 #define BALL_PREDICTED_TOPIC "/kalman_filter/points"
 #define BALL_DETECTED_TOPIC "/points_server/points"
+//#define SRV_GET_JOINT "pa10/getJointConfig"
+#define SRV_GET_JOINT "/getJointConfig"
 
 using namespace rw::kinematics;
 using namespace rw::math;
@@ -47,7 +49,7 @@ void RosNodeThread::run()
 	ros::NodeHandle nh;
 	ros::Subscriber ball_predicted_subscriber = nh.subscribe(BALL_PREDICTED_TOPIC, 1, ballPredictedCallback);
 	ros::Subscriber ball_detected_subscriber = nh.subscribe(BALL_DETECTED_TOPIC, 1, ballDetectedCallback);
-	ros::ServiceClient sc_get_joint_conf = nh.serviceClient<pa10_dummy::getJointConfig>("pa10/getJointConfig");
+	ros::ServiceClient sc_get_joint_conf = nh.serviceClient<pa10_dummy::getJointConfig>(SRV_GET_JOINT);
 	int frame_rate = 1;
 	pa10_dummy::getJointConfig srv;
 
@@ -55,7 +57,7 @@ void RosNodeThread::run()
 		if (!stopRobot_){
 			// Get the global frame rate
 			ros::param::get(PARAM_FRAME_RATE, frame_rate);
-			ros::Rate loop_rate(frame_rate*5);
+			ros::Rate loop_rate(frame_rate*3);
 			//ros::Rate loop_rate(frame_rate);
 
 			if (sc_get_joint_conf.call(srv)) {
