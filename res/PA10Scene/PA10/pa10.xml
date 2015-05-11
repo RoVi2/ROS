@@ -5,7 +5,7 @@
 	<Joint name="Joint1" type="Revolute">
 		<RPY>0 0 0</RPY>
 		<Pos>0 0 0.211</Pos>
-		<PosLimit min="-180" max="180" />
+		<PosLimit min="-170" max="170" />
 		<VelLimit max="90" />
 		<AccLimit max="180" />
 	</Joint>
@@ -16,7 +16,7 @@
 			0 0 1 0
 			1 0 0 0.105
 		</Transform>
-		<PosLimit min="-94" max="94" />
+		<PosLimit min="-90" max="90" />
 		<VelLimit max="94" />
 		<AccLimit max="200" />
 	</Joint>
@@ -26,7 +26,7 @@
 			1 0 0 0
 			0 1 0 0
 		</Transform>
-		<PosLimit min="-180" max="180" />
+		<PosLimit min="-170" max="170" />
 		<VelLimit max="180" />
 		<AccLimit max="360" />
 	</Joint>
@@ -36,7 +36,7 @@
 			0 0 1 0
 			1 0 0 0
 		</Transform>
-		<PosLimit min="-143" max="143" />
+		<PosLimit min="-140" max="140" />
 		<VelLimit max="143" />
 		<AccLimit max="300" />
 
@@ -47,7 +47,7 @@
 			1 0 0 0
 			0 1 0 0
 		</Transform>
-		<PosLimit min="-270" max="270" />
+		<PosLimit min="-250" max="250" />
 		<VelLimit max="270" />
 		<AccLimit max="540" />
 	</Joint>
@@ -57,7 +57,7 @@
 			0 0 1 0
 			1 0 0 0
 		</Transform>
-		<PosLimit min="-120" max="120" />
+		<PosLimit min="-100" max="100" />
 		<VelLimit max="120" />
 		<AccLimit max="360" />
 	</Joint>
