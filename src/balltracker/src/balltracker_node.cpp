@@ -15,6 +15,25 @@
 using namespace cv;
 using namespace std;
 
+#define SUB_CAMERA_LEFT_INFORMATION "/stereo_camera/left/camera_info"
+#define SUB_SUB_CAMERA_RIGHT_INFORMATION "/stereo_camera/right/camera_info"
+#define SUB_CAMERA_LEFT_IMAGE "/stereo_camera/left/image_raw"
+#define SUB_CAMERA_RIGHT_IMAGE "/stereo_camera/right/image_raw"
+
+#define PUB_IMAGE_LEFT "/balltracker/image/left"
+#define PUB_IMAGE_RIGHT "/balltracker/image/right"
+
+#define PARAM_FRAME_RATE "/frame_rate"
+#define PARAM_DEBUGGING "/balltracker_node/debugging"
+#define PARAM_VIEW_IMAGES "/balltracker_node/view_images"
+
+//Colors
+#define RESET "\e[m"
+#define GREEN "\e[32m"
+#define YELLOW "\e[33m"
+#define MAGENTA "\e[35m"
+#define CYAN "\e[36m"
+
 
 /*
  * 3D Camera Definition
@@ -80,17 +99,23 @@ bool findWhiteBall(cv::Mat const &img, cv::Point2d &center, double &circumferenc
 
 	// Examine each contour. Only large ones are recognized as the ball.
 	// TODO Only the center of first the first contour fitting is returned.
-	for (auto const &contour : contours) {
-		double circumference_tmp = cv::arcLength(contour, true);
-		double area_tmp = cv::contourArea(contour);
+	if (!contours.empty()){
+		for (auto const &contour : contours) {
+			double circumference_tmp = cv::arcLength(contour, true);
+			double area_tmp = cv::contourArea(contour);
 
-		if (circumference_tmp > 370 && area_tmp > 4700) {
-			cv::Moments mom = cv::moments(contour, true);
-			area = area_tmp;
-			circumference = circumference_tmp;
-			center = cv::Point2d(mom.m10 / mom.m00, mom.m01 / mom.m00); // Mass center
-			return true;
+			if (circumference_tmp > 370 && area_tmp > 4700) {
+				cv::Moments mom = cv::moments(contour, true);
+				area = area_tmp;
+				circumference = circumference_tmp;
+				center = cv::Point2d(mom.m10 / mom.m00, mom.m01 / mom.m00); // Mass center
+				return true;
+			}
 		}
+	}
+	else {
+		center = cv::Point2d(0,0);
+		if (debugging) cout << "Ball not found!" << endl;
 	}
 
 	return false;
@@ -107,6 +132,8 @@ bool findWhiteBall(cv::Mat const &img, cv::Point2d &center, double &circumferenc
  */
 void readCalibrationCameraLeft(sensor_msgs::CameraInfo cameraInfo)
 {
+	//if (debugging) cout << "Left camera calibration" << endl;
+
 	Mat intrinsic = Mat::zeros(3, 3, CV_64F);
 	Mat distortion = Mat::zeros(5, 1, CV_64F);
 	Mat rectification = Mat::zeros(3, 3, CV_64F);
@@ -115,6 +142,7 @@ void readCalibrationCameraLeft(sensor_msgs::CameraInfo cameraInfo)
 	Mat translation = Mat::zeros(3, 1, CV_64F);
 	Mat rotation = Mat::zeros(3, 3, CV_64F);
 	double image_width, image_height;
+
 
 	//Intrinsic
 	intrinsic.at<double>(0,0) = cameraInfo.K.at(0);
@@ -129,10 +157,10 @@ void readCalibrationCameraLeft(sensor_msgs::CameraInfo cameraInfo)
 
 	//Distortion
 	distortion.at<double>(0,0) = cameraInfo.D.at(0);
-	distortion.at<double>(0,1) = cameraInfo.D.at(1);
-	distortion.at<double>(0,2) = cameraInfo.D.at(2);
-	distortion.at<double>(0,3) = cameraInfo.D.at(3);
-	distortion.at<double>(0,4) = cameraInfo.D.at(4);
+	distortion.at<double>(1,0) = cameraInfo.D.at(1);
+	distortion.at<double>(2,0) = cameraInfo.D.at(2);
+	distortion.at<double>(3,0) = cameraInfo.D.at(3);
+	distortion.at<double>(4,0) = cameraInfo.D.at(4);
 
 	//Rectification
 	rectification.at<double>(0,0) = cameraInfo.R.at(0);
@@ -149,15 +177,15 @@ void readCalibrationCameraLeft(sensor_msgs::CameraInfo cameraInfo)
 	projection.at<double>(0,0) = cameraInfo.P.at(0);
 	projection.at<double>(0,1) = cameraInfo.P.at(1);
 	projection.at<double>(0,2) = cameraInfo.P.at(2);
-	projection.at<double>(0,3) = cameraInfo.P.at(4);
-	projection.at<double>(1,0) = cameraInfo.P.at(5);
-	projection.at<double>(1,1) = cameraInfo.P.at(6);
-	projection.at<double>(1,2) = cameraInfo.P.at(7);
-	projection.at<double>(1,3) = cameraInfo.P.at(8);
-	projection.at<double>(2,0) = cameraInfo.P.at(9);
-	projection.at<double>(2,1) = cameraInfo.P.at(10);
-	projection.at<double>(2,2) = cameraInfo.P.at(11);
-	projection.at<double>(2,3) = cameraInfo.P.at(12);
+	projection.at<double>(0,3) = cameraInfo.P.at(3);
+	projection.at<double>(1,0) = cameraInfo.P.at(4);
+	projection.at<double>(1,1) = cameraInfo.P.at(5);
+	projection.at<double>(1,2) = cameraInfo.P.at(6);
+	projection.at<double>(1,3) = cameraInfo.P.at(7);
+	projection.at<double>(2,0) = cameraInfo.P.at(8);
+	projection.at<double>(2,1) = cameraInfo.P.at(9);
+	projection.at<double>(2,2) = cameraInfo.P.at(10);
+	projection.at<double>(2,3) = cameraInfo.P.at(11);
 
 	//Size
 	image_height = cameraInfo.height;
@@ -184,7 +212,7 @@ void readCalibrationCameraLeft(sensor_msgs::CameraInfo cameraInfo)
 	stereo_camera.left.translation = translation;
 	stereo_camera.left.rotation = rotation;
 
-	if (debugging) stereo_camera.right.printData();
+	//if (debugging) stereo_camera.right.printData();
 }
 
 /**
@@ -195,6 +223,8 @@ void readCalibrationCameraLeft(sensor_msgs::CameraInfo cameraInfo)
  */
 void readCalibrationCameraRight(sensor_msgs::CameraInfo cameraInfo)
 {
+	//if (debugging) cout << "Right camera calibration" << endl;
+
 	Mat intrinsic = Mat::zeros(3, 3, CV_64F);
 	Mat distortion = Mat::zeros(5, 1, CV_64F);
 	Mat rectification = Mat::zeros(3, 3, CV_64F);
@@ -217,10 +247,10 @@ void readCalibrationCameraRight(sensor_msgs::CameraInfo cameraInfo)
 
 	//Distortion
 	distortion.at<double>(0,0) = cameraInfo.D.at(0);
-	distortion.at<double>(0,1) = cameraInfo.D.at(1);
-	distortion.at<double>(0,2) = cameraInfo.D.at(2);
-	distortion.at<double>(0,3) = cameraInfo.D.at(3);
-	distortion.at<double>(0,4) = cameraInfo.D.at(4);
+	distortion.at<double>(1,0) = cameraInfo.D.at(1);
+	distortion.at<double>(2,0) = cameraInfo.D.at(2);
+	distortion.at<double>(3,0) = cameraInfo.D.at(3);
+	distortion.at<double>(4,0) = cameraInfo.D.at(4);
 
 	//Rectification
 	rectification.at<double>(0,0) = cameraInfo.R.at(0);
@@ -237,15 +267,15 @@ void readCalibrationCameraRight(sensor_msgs::CameraInfo cameraInfo)
 	projection.at<double>(0,0) = cameraInfo.P.at(0);
 	projection.at<double>(0,1) = cameraInfo.P.at(1);
 	projection.at<double>(0,2) = cameraInfo.P.at(2);
-	projection.at<double>(0,3) = cameraInfo.P.at(4);
-	projection.at<double>(1,0) = cameraInfo.P.at(5);
-	projection.at<double>(1,1) = cameraInfo.P.at(6);
-	projection.at<double>(1,2) = cameraInfo.P.at(7);
-	projection.at<double>(1,3) = cameraInfo.P.at(8);
-	projection.at<double>(2,0) = cameraInfo.P.at(9);
-	projection.at<double>(2,1) = cameraInfo.P.at(10);
-	projection.at<double>(2,2) = cameraInfo.P.at(11);
-	projection.at<double>(2,3) = cameraInfo.P.at(12);
+	projection.at<double>(0,3) = cameraInfo.P.at(3);
+	projection.at<double>(1,0) = cameraInfo.P.at(4);
+	projection.at<double>(1,1) = cameraInfo.P.at(5);
+	projection.at<double>(1,2) = cameraInfo.P.at(6);
+	projection.at<double>(1,3) = cameraInfo.P.at(7);
+	projection.at<double>(2,0) = cameraInfo.P.at(8);
+	projection.at<double>(2,1) = cameraInfo.P.at(9);
+	projection.at<double>(2,2) = cameraInfo.P.at(10);
+	projection.at<double>(2,3) = cameraInfo.P.at(11);
 
 	//Size
 	image_height = cameraInfo.height;
@@ -272,7 +302,7 @@ void readCalibrationCameraRight(sensor_msgs::CameraInfo cameraInfo)
 	stereo_camera.right.translation = translation;
 	stereo_camera.right.rotation = rotation;
 
-	if (debugging) stereo_camera.right.printData();
+	//if (debugging) stereo_camera.right.printData();
 }
 
 /**
@@ -287,20 +317,39 @@ geometry_msgs::Point triangulationOpenCV(cv::Point2d & tracked_point_left, cv::P
 	cv::Mat pnts3D(1, 1, CV_64FC4);
 	cv::Mat cam0pnts(1, 1, CV_64FC2);
 	cv::Mat cam1pnts(1, 1, CV_64FC2);
+
+	//Initialize values
+	geometry_msgs::Point point_geo_msg;
+	point_geo_msg.x = 0;
+	point_geo_msg.y = 0;
+	point_geo_msg.z = 0;
+	cam0pnts.empty();
+	cam1pnts.empty();
+	pnts3D.empty();
+
+
 	cam0pnts.at<Vec2d>(0)[0] = tracked_point_left.x;
 	cam0pnts.at<Vec2d>(0)[1] = tracked_point_left.y;
 	cam1pnts.at<Vec2d>(0)[0] = tracked_point_right.x;
 	cam1pnts.at<Vec2d>(0)[1] = tracked_point_right.y;
 	//Triangulate
-	cv::triangulatePoints(stereo_camera.left.projection, stereo_camera.right.projection,
+	//Check if there is a valid point and triangulate
+	if (!(tracked_point_left.x==0 && tracked_point_left.y==0) ||
+		!(tracked_point_right.x==0 && tracked_point_right.y ==0) ){
+		cv::triangulatePoints(stereo_camera.left.projection, stereo_camera.right.projection,
 			cam0pnts, cam1pnts, pnts3D);
-	//Some message for make life easier
-	if (debugging) cout << endl << "OpenCV triangulation" << endl << "Image points: " << cam0pnts << "\t"
-			<< cam1pnts << endl << "Triangulated point: " << pnts3D << endl;
-	if (debugging) cout << "Normalized: " << pnts3D / pnts3D.at<double>(3, 0) << endl;
+	}
+	//Show the results
+	if (debugging) cout << GREEN << "Left[" <<
+			tracked_point_left.x << ", " << tracked_point_left.y << "] " << MAGENTA << "Right[" <<
+			tracked_point_right.x << ", " << tracked_point_right.y << "] " << CYAN << "Triangulated[" <<
+			pnts3D.at<double>(0,0) / pnts3D.at<double>(3,0) << ", " <<
+			pnts3D.at<double>(1,0) / pnts3D.at<double>(3,0) << ", " <<
+			pnts3D.at<double>(2,0) / pnts3D.at<double>(3,0) << "]" <<
+			RESET << endl;
 
 	//Normalize the point
-	geometry_msgs::Point point_geo_msg;
+
 	point_geo_msg.x = pnts3D.at<double>(0,0) / pnts3D.at<double>(3,0);
 	point_geo_msg.y = pnts3D.at<double>(1,0) / pnts3D.at<double>(3,0);
 	point_geo_msg.z = pnts3D.at<double>(2,0) / pnts3D.at<double>(3,0);
@@ -397,7 +446,7 @@ geometry_msgs::Point stereopsis(cv::Point & tracked_point, Mat imageLeft, Mat im
 			p1.y = erN.at<double>(1, 0);
 		} else {
 			double deltaA = (erN.at<double>(1, 0) - mrN.at<double>(1, 0))
-																					/ (erN.at<double>(0, 0) - mrN.at<double>(0, 0));
+																							/ (erN.at<double>(0, 0) - mrN.at<double>(0, 0));
 			double b = mrN.at<double>(1, 0) - deltaA * mrN.at<double>(0, 0);
 			p1.x = 0;
 			p1.y = b;
@@ -439,7 +488,7 @@ geometry_msgs::Point stereopsis(cv::Point & tracked_point, Mat imageLeft, Mat im
 	Mat mu1 = Cl(Range(0, 3), Range(0, 1)).cross(
 			M1inf(Range(0, 3), Range(0, 1))) / cv::norm(M1inf);
 	Mat v1 = M1inf(Range(0, 3), Range(0, 1))
-																		/ cv::norm(M1inf(Range(0, 3), Range(0, 1)));
+																				/ cv::norm(M1inf(Range(0, 3), Range(0, 1)));
 
 	//Compute the point of infinity for the second image and compute Plucker line parameters
 	cv::Mat M2inf = Pxr.inv(DECOMP_SVD) * m_r;
@@ -463,9 +512,9 @@ geometry_msgs::Point stereopsis(cv::Point & tracked_point, Mat imageLeft, Mat im
 
 	//Compute the closest point of intersection for the two lines of infinity
 	Mat M1 = (v1 * v2mu2T - (v1 * v2T) * v1 * v2mu1T)
-																		/ pow(cv::norm(v1.cross(v2)), 2) * v1 + v1.cross(mu1);
+																				/ pow(cv::norm(v1.cross(v2)), 2) * v1 + v1.cross(mu1);
 	Mat M2 = (v2 * v1mu1T - (v2 * v1T) * v2 * v1mu2T)
-																		/ pow(cv::norm(v2.cross(v1)), 2) * v2 + v2.cross(mu1);
+																				/ pow(cv::norm(v2.cross(v1)), 2) * v2 + v2.cross(mu1);
 
 	if (debugging) cout << endl << "Closest point on the two lines"<< endl << "M1: "
 			<< M1 << endl << "M2: " << M2 << endl;
@@ -493,29 +542,33 @@ int main(int argc, char *argv[])
 	ros::init(argc, argv, "balltracker_node");
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it(nh);
-	image_transport::Publisher pub_left = it.advertise("balltracker/image/left", 1);
-	image_transport::Publisher pub_right = it.advertise("balltracker/image/right", 1);
-	SyncedImages si(it, "stereo_camera/left/image_raw", "stereo_camera/right/image_raw");
+	image_transport::Publisher pub_left = it.advertise(PUB_IMAGE_LEFT, 1);
+	image_transport::Publisher pub_right = it.advertise(PUB_IMAGE_RIGHT, 1);
+	SyncedImages si(it, SUB_CAMERA_LEFT_IMAGE, SUB_CAMERA_RIGHT_IMAGE);
 
-	ros::Subscriber sub_camera_calibration_left = nh.subscribe("stereo_camera/left/camera_information", 1, readCalibrationCameraLeft);;
-	ros::Subscriber sub_camera_calibration_right = nh.subscribe("stereo_camera/right/camera_information", 1, readCalibrationCameraRight);;
+	ros::Subscriber sub_camera_calibration_left = nh.subscribe(SUB_CAMERA_LEFT_INFORMATION, 1, readCalibrationCameraLeft);;
+	ros::Subscriber sub_camera_calibration_right = nh.subscribe(SUB_SUB_CAMERA_RIGHT_INFORMATION, 1, readCalibrationCameraRight);;
 	//Parameters
-	nh.setParam("/balltracker_node/debugging", false);
-	nh.setParam("/balltracker_node/view_images", false);
+	nh.setParam(PARAM_DEBUGGING, true);
+	nh.setParam(PARAM_VIEW_IMAGES, true);
 
 	int frame_rate=1;
+	nh.setParam(PARAM_FRAME_RATE, frame_rate);
+
+	if (debugging) cout << "Balltracker started!" << endl;
+
 	cv::Mat img_left, img_right;
 	bool success_l, success_r;
 	cv::Point2d center_l, center_r;
 	double circum_l, circum_r, area_l, area_r;
 
-
 	while (nh.ok()) {
 		//Read parameters
-		ros::param::get("/balltracker_node/debugging", debugging);
-		ros::param::get("/balltracker_node/view_images", view_images);
+		ros::param::get(PARAM_DEBUGGING, debugging);
+		ros::param::get(PARAM_VIEW_IMAGES, view_images);
+
 		//Update the frame rate from the param server
-		ros::param::get("/frame_rate", frame_rate);
+		ros::param::get(PARAM_FRAME_RATE, frame_rate);
 		ros::Rate loop_rate(frame_rate);
 		//If the images are sync
 		if (si.updated()) {
@@ -525,14 +578,22 @@ int main(int argc, char *argv[])
 
 			if (success_l)
 				cv::circle(img_left, center_l, circum_l / (2 * M_PI), cv::Scalar(255, 0, 0), 3);
+			else {
+				center_l.x = 0;
+				center_l.y = 0;
+			}
 
 			if (success_r)
 				cv::circle(img_right, center_r, circum_r / (2 * M_PI), cv::Scalar(255, 0, 0), 3);
+			else {
+				center_r.x = 0;
+				center_r.y = 0;
+			}
 
 			sensor_msgs::ImagePtr msg_left = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::RGB8, img_left).toImageMsg();
 			sensor_msgs::ImagePtr msg_right = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::RGB8, img_right).toImageMsg();
-			pub_left.publish(msg_left);
-			pub_right.publish(msg_right);
+			if (view_images) pub_left.publish(msg_left);
+			if (view_images) pub_right.publish(msg_right);
 
 			geometry_msgs::PointStamped pointToPublish;
 			pointToPublish.point = triangulationOpenCV(center_l, center_r);
