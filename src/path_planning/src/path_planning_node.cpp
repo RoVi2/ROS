@@ -45,7 +45,8 @@ using namespace rwlibs::proximitystrategies;
 #define ROBOT_NAME "PA10"
 
 //ROS Paths
-#define SUBSCRIBER "/points_server/points"
+#define SUBSCRIBER "/balltracker/points"
+//#define SUBSCRIBER "/points_server/points"
 //#define SUBSCRIBER "/kalman_filter/points"
 #define PARAM_DEBUGGING "/path_planning/debugging"
 #define PARAM_FRAME_RATE "/frame_rate"
@@ -101,7 +102,7 @@ void sendRobotToQ(rw::math::Q & Q_desired,
 		 */
 		Timer waitUntilRobot;
 		waitUntilRobot.resetAndResume();
-		while (waitUntilRobot.getTimeMs() <= 1500)
+		while (waitUntilRobot.getTimeMs() <= 500)
 			; //Do nothing
 	}
 	else if (debugging) ROS_ERROR("Robot not found");
@@ -211,7 +212,7 @@ int main(int argc, char** argv)
 		Vector3D<double> point_kalman_polar (radius, angle, height);
 		if (debugging) cout << GREEN"	and in Polar: " RESET << point_kalman_polar << endl;
 		//The camera position will be 0.5 meters from the kalman point in the radial direction
-		Vector3D<double> camera_position_polar = point_kalman_polar - Vector3D<double>(0.5,0,0);
+		Vector3D<double> camera_position_polar = point_kalman_polar - Vector3D<double>(0.3,0,0);
 		Vector3D<double> camera_position (
 				camera_position_polar[0]*cos(camera_position_polar[1]), //r*cos(angle)
 				camera_position_polar[0]*sin(camera_position_polar[1]), //r*sin(angle)

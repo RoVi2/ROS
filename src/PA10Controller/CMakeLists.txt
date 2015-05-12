@@ -19,7 +19,7 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 set(LibraryList pthread)
 
 generate_messages(DEPENDENCIES std_msgs)
-catkin_package(INCLUDE_DIRS include)
+catkin_package(INCLUDE_DIRS)
 
 # The shared library to build:
 add_executable(pa10_client src/pa10_client.cpp)

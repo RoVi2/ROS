@@ -4,6 +4,8 @@
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
+#include <image_transport/transport_hints.h>
+#include <compressed_image_transport/compressed_subscriber.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
 #include <message_filters/synchronizer.h>
@@ -11,7 +13,7 @@
 #include <cv_bridge/cv_bridge.h>
 
 /**
- * \brief Class subscribes to two ROS image topics and keeps updates syncronized.
+ * \brief Class subscribes to two ROS image topics and keeps updates synchronized.
  */
 class SyncedImages
 {

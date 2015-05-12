@@ -3,12 +3,14 @@
 SyncedImages::SyncedImages(image_transport::ImageTransport it,
                            std::string const &left_topic,
                            std::string const &right_topic)
-    : sub_left_(it, left_topic, 4) // Queue size of 4 is shown to be reasonable.
-    , sub_right_(it, right_topic, 4) // Smaller queue reduces performance.
+	:
+      sub_left_(it, left_topic, 4, image_transport::TransportHints("compressed")) // Queue size of 4 is shown to be reasonable.
+    , sub_right_(it, right_topic, 4, image_transport::TransportHints("compressed")) // Smaller queue reduces performance.
     , sync_(ApproxPolicyType(1), sub_left_, sub_right_)
     , updated_(false)
     , time_last_update_(0)
 {
+
     sync_.registerCallback(boost::bind(&SyncedImages::imageCb, this, _1, _2));
 }
 

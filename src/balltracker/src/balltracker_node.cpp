@@ -6,6 +6,7 @@
 
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
+#include <image_transport/transport_hints.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <geometry_msgs/PointStamped.h>
@@ -22,6 +23,7 @@ using namespace std;
 
 #define PUB_IMAGE_LEFT "/balltracker/image/left"
 #define PUB_IMAGE_RIGHT "/balltracker/image/right"
+#define PUB_POINTS "/balltracker/points"
 
 #define PARAM_FRAME_RATE "/frame_rate"
 #define PARAM_DEBUGGING "/balltracker_node/debugging"
@@ -104,7 +106,11 @@ bool findWhiteBall(cv::Mat const &img, cv::Point2d &center, double &circumferenc
 			double circumference_tmp = cv::arcLength(contour, true);
 			double area_tmp = cv::contourArea(contour);
 
-			if (circumference_tmp > 370 && area_tmp > 4700) {
+			double radiusThreshold = 30;
+
+			if (circumference_tmp > 2*3.1416*radiusThreshold &&
+					area_tmp > 3.1416*radiusThreshold*radiusThreshold)
+			{
 				cv::Moments mom = cv::moments(contour, true);
 				area = area_tmp;
 				circumference = circumference_tmp;
@@ -187,6 +193,7 @@ void readCalibrationCameraLeft(sensor_msgs::CameraInfo cameraInfo)
 	projection.at<double>(2,2) = cameraInfo.P.at(10);
 	projection.at<double>(2,3) = cameraInfo.P.at(11);
 
+
 	//Size
 	image_height = cameraInfo.height;
 	image_width = cameraInfo.width;
@@ -264,7 +271,7 @@ void readCalibrationCameraRight(sensor_msgs::CameraInfo cameraInfo)
 	rectification.at<double>(2,2) = cameraInfo.R.at(8);
 
 	//Projection
-	projection.at<double>(0,0) = cameraInfo.P.at(0);
+ 	projection.at<double>(0,0) = cameraInfo.P.at(0);
 	projection.at<double>(0,1) = cameraInfo.P.at(1);
 	projection.at<double>(0,2) = cameraInfo.P.at(2);
 	projection.at<double>(0,3) = cameraInfo.P.at(3);
@@ -276,6 +283,7 @@ void readCalibrationCameraRight(sensor_msgs::CameraInfo cameraInfo)
 	projection.at<double>(2,1) = cameraInfo.P.at(9);
 	projection.at<double>(2,2) = cameraInfo.P.at(10);
 	projection.at<double>(2,3) = cameraInfo.P.at(11);
+
 
 	//Size
 	image_height = cameraInfo.height;
@@ -334,19 +342,22 @@ geometry_msgs::Point triangulationOpenCV(cv::Point2d & tracked_point_left, cv::P
 	cam1pnts.at<Vec2d>(0)[1] = tracked_point_right.y;
 	//Triangulate
 	//Check if there is a valid point and triangulate
-	if (!(tracked_point_left.x==0 && tracked_point_left.y==0) ||
-		!(tracked_point_right.x==0 && tracked_point_right.y ==0) ){
+	if (!(tracked_point_left.x==0 && tracked_point_left.y==0) &&
+		!(tracked_point_right.x==0 && tracked_point_right.y==0) ){
 		cv::triangulatePoints(stereo_camera.left.projection, stereo_camera.right.projection,
 			cam0pnts, cam1pnts, pnts3D);
+		//Show the results
+		if (debugging) cout << GREEN << "Left[" <<
+				tracked_point_left.x << ", " << tracked_point_left.y << "] " << MAGENTA << "Right[" <<
+				tracked_point_right.x << ", " << tracked_point_right.y << "] " << CYAN << "Triangulated[" <<
+				pnts3D.at<double>(0,0) / pnts3D.at<double>(3,0) << ", " <<
+				pnts3D.at<double>(1,0) / pnts3D.at<double>(3,0) << ", " <<
+				pnts3D.at<double>(2,0) / pnts3D.at<double>(3,0) << "]" <<
+				RESET << endl;
 	}
-	//Show the results
-	if (debugging) cout << GREEN << "Left[" <<
-			tracked_point_left.x << ", " << tracked_point_left.y << "] " << MAGENTA << "Right[" <<
-			tracked_point_right.x << ", " << tracked_point_right.y << "] " << CYAN << "Triangulated[" <<
-			pnts3D.at<double>(0,0) / pnts3D.at<double>(3,0) << ", " <<
-			pnts3D.at<double>(1,0) / pnts3D.at<double>(3,0) << ", " <<
-			pnts3D.at<double>(2,0) / pnts3D.at<double>(3,0) << "]" <<
-			RESET << endl;
+	else{
+		cout << YELLOW << "Lost!" << endl;
+	}
 
 	//Normalize the point
 
@@ -546,8 +557,20 @@ int main(int argc, char *argv[])
 	image_transport::Publisher pub_right = it.advertise(PUB_IMAGE_RIGHT, 1);
 	SyncedImages si(it, SUB_CAMERA_LEFT_IMAGE, SUB_CAMERA_RIGHT_IMAGE);
 
-	ros::Subscriber sub_camera_calibration_left = nh.subscribe(SUB_CAMERA_LEFT_INFORMATION, 1, readCalibrationCameraLeft);;
-	ros::Subscriber sub_camera_calibration_right = nh.subscribe(SUB_SUB_CAMERA_RIGHT_INFORMATION, 1, readCalibrationCameraRight);;
+	ros::Publisher pub_points;
+	pub_points = nh.advertise<geometry_msgs::PointStamped>(PUB_POINTS, 1);
+
+	ros::Subscriber sub_camera_calibration_left = nh.subscribe(
+			SUB_CAMERA_LEFT_INFORMATION,
+			1,
+			readCalibrationCameraLeft
+	);
+	ros::Subscriber sub_camera_calibration_right = nh.subscribe(
+			SUB_SUB_CAMERA_RIGHT_INFORMATION,
+			1,
+			readCalibrationCameraRight
+	);
+
 	//Parameters
 	nh.setParam(PARAM_DEBUGGING, true);
 	nh.setParam(PARAM_VIEW_IMAGES, true);
@@ -558,6 +581,7 @@ int main(int argc, char *argv[])
 	if (debugging) cout << "Balltracker started!" << endl;
 
 	cv::Mat img_left, img_right;
+	cv::Mat img_left_undistorted, img_right_undistorted;
 	bool success_l, success_r;
 	cv::Point2d center_l, center_r;
 	double circum_l, circum_r, area_l, area_r;
@@ -572,32 +596,39 @@ int main(int argc, char *argv[])
 		ros::Rate loop_rate(frame_rate);
 		//If the images are sync
 		if (si.updated()) {
+			//Synchronization
 			si.images(img_left, img_right);
-			success_l = findWhiteBall(img_left, center_l, circum_l, area_l);
-			success_r = findWhiteBall(img_right, center_r, circum_r, area_r);
+			//Undistortion
+			cv::undistort(img_left, img_left_undistorted, stereo_camera.left.intrinsic, stereo_camera.left.distortion);
+			cv::undistort(img_right, img_right_undistorted, stereo_camera.left.intrinsic, stereo_camera.left.distortion);
+			//Feature extraction
+			success_l = findWhiteBall(img_left_undistorted, center_l, circum_l, area_l);
+			success_r = findWhiteBall(img_right_undistorted, center_r, circum_r, area_r);
 
 			if (success_l)
-				cv::circle(img_left, center_l, circum_l / (2 * M_PI), cv::Scalar(255, 0, 0), 3);
+				cv::circle(img_left_undistorted, center_l, circum_l / (2 * M_PI), cv::Scalar(255, 0, 0), 3);
 			else {
 				center_l.x = 0;
 				center_l.y = 0;
 			}
 
 			if (success_r)
-				cv::circle(img_right, center_r, circum_r / (2 * M_PI), cv::Scalar(255, 0, 0), 3);
+				cv::circle(img_right_undistorted, center_r, circum_r / (2 * M_PI), cv::Scalar(255, 0, 0), 3);
 			else {
 				center_r.x = 0;
 				center_r.y = 0;
 			}
 
-			sensor_msgs::ImagePtr msg_left = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::RGB8, img_left).toImageMsg();
-			sensor_msgs::ImagePtr msg_right = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::RGB8, img_right).toImageMsg();
+
+			sensor_msgs::ImagePtr msg_left = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::RGB8, img_left_undistorted).toImageMsg();
+			sensor_msgs::ImagePtr msg_right = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::RGB8, img_right_undistorted).toImageMsg();
 			if (view_images) pub_left.publish(msg_left);
 			if (view_images) pub_right.publish(msg_right);
 
 			geometry_msgs::PointStamped pointToPublish;
 			pointToPublish.point = triangulationOpenCV(center_l, center_r);
 			pointToPublish.header.frame_id = "Camera";
+			pub_points.publish(pointToPublish);
 
 		}
 		//Sleep baby, sleep
