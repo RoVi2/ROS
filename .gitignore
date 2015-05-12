@@ -22,3 +22,6 @@
 *.toc
 *.fuse*
 *.pdf
+
+# GNU temp files
+*~
