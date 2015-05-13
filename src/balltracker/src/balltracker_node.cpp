@@ -575,7 +575,7 @@ int main(int argc, char *argv[])
 	nh.setParam(PARAM_DEBUGGING, true);
 	nh.setParam(PARAM_VIEW_IMAGES, true);
 
-	int frame_rate=1;
+	int frame_rate=25;
 	nh.setParam(PARAM_FRAME_RATE, frame_rate);
 
 	if (debugging) cout << "Balltracker started!" << endl;
@@ -632,7 +632,7 @@ int main(int argc, char *argv[])
 
 		}
 		//Sleep baby, sleep
-		ros::spinOnce();
+		ros::AsyncSpinner(0).start();
 		loop_rate.sleep();
 	}
 

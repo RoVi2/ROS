@@ -9,8 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
     image_transport
 )
 
-find_package(Boost COMPONENTS system thread timer REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(Boost COMPONENTS system thread timer REQUIRED)
 
 catkin_package()
 
@@ -21,7 +21,8 @@ include_directories(
 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -Wextra -Werror")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -Wextra")
+#-Werror
 
 set(SOURCES
     src/balltracker_node.cpp
