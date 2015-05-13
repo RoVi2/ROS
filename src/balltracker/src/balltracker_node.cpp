@@ -118,7 +118,9 @@ bool findWhiteBall(cv::Mat const &img, cv::Point2d &center, double &circumferenc
 	// Filter each HSV channel and combine in single binary image.
 	cv::Mat filt_bin_img;
 	cv::inRange(hsv_img, cv::Scalar(25, 70, 100), cv::Scalar(100, 255, 255), filt_bin_img);
-	removeSmallBlobs(filt_bin_img, 1000);
+	morphologyEx(filt_bin_img, filt_bin_img, 0, getStructuringElement(0, Size(9,9), Point(4,4)));
+    morphologyEx(filt_bin_img, filt_bin_img, 1, getStructuringElement(0, Size(9,9), Point(4,4)));
+	//removeSmallBlobs(filt_bin_img, 1000);
 
 	// Find contours.
 	std::vector<std::vector<cv::Point>> contours;
