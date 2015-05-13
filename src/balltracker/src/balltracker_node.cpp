@@ -63,6 +63,30 @@ struct StereoPair {
 };
 
 
+/**
+ *	Detect and delete white areas in the image smaller than size
+ * @param im
+ * @param size --> adjust
+ * @return image cleaned
+ */
+void removeSmallBlobs(Mat& im, double size )
+{
+    // Find all contours
+    vector<vector<Point> > contours;
+    blur(im, im, cv::Size(9, 9));
+    findContours(im.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+
+    for (unsigned int i = 0; i < contours.size(); i++)
+    {
+        // Calculate contour area
+        double area = contourArea(contours[i]);
+        // Remove small objects by drawing the contour with black color
+        if (area > 0 && area <= size)
+            drawContours(im, contours, i, CV_RGB(0,0,0), -1);
+    }
+}
+
+
 /*
  * Global parameters. Sorry :(
  */
@@ -93,7 +117,8 @@ bool findWhiteBall(cv::Mat const &img, cv::Point2d &center, double &circumferenc
 
 	// Filter each HSV channel and combine in single binary image.
 	cv::Mat filt_bin_img;
-	cv::inRange(hsv_img, cv::Scalar(0, 0, 245), cv::Scalar(30, 30, 255), filt_bin_img);
+	cv::inRange(hsv_img, cv::Scalar(25, 70, 100), cv::Scalar(100, 255, 255), filt_bin_img);
+	removeSmallBlobs(filt_bin_img, 1000);
 
 	// Find contours.
 	std::vector<std::vector<cv::Point>> contours;
@@ -108,14 +133,18 @@ bool findWhiteBall(cv::Mat const &img, cv::Point2d &center, double &circumferenc
 
 			double radiusThreshold = 30;
 
-			if (circumference_tmp > 2*3.1416*radiusThreshold &&
-					area_tmp > 3.1416*radiusThreshold*radiusThreshold)
+			if (circumference_tmp > 2*3.1416*radiusThreshold && area_tmp > 3.1416*radiusThreshold*radiusThreshold)
 			{
 				cv::Moments mom = cv::moments(contour, true);
 				area = area_tmp;
 				circumference = circumference_tmp;
 				center = cv::Point2d(mom.m10 / mom.m00, mom.m01 / mom.m00); // Mass center
-				return true;
+				double f = (4*M_PI*area)/(pow(circumference, 2));
+				if(f>0.4){
+					return true;
+				}
+				else 
+					return false;
 			}
 		}
 	}
@@ -607,6 +636,7 @@ int main(int argc, char *argv[])
 
 			if (success_l)
 				cv::circle(img_left_undistorted, center_l, circum_l / (2 * M_PI), cv::Scalar(255, 0, 0), 3);
+				cv::circle(img_left_undistorted, center_l, 5, cv::Scalar(0, 255, 0), 3);
 			else {
 				center_l.x = 0;
 				center_l.y = 0;
@@ -614,6 +644,7 @@ int main(int argc, char *argv[])
 
 			if (success_r)
 				cv::circle(img_right_undistorted, center_r, circum_r / (2 * M_PI), cv::Scalar(255, 0, 0), 3);
+				cv::circle(img_right_undistorted, center_r, 5, cv::Scalar(0, 255, 0), 3);
 			else {
 				center_r.x = 0;
 				center_r.y = 0;
