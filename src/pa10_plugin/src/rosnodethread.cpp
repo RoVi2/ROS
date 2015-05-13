@@ -50,29 +50,17 @@ void RosNodeThread::run()
 	ros::Subscriber ball_predicted_subscriber = nh.subscribe(BALL_PREDICTED_TOPIC, 1, ballPredictedCallback);
 	ros::Subscriber ball_detected_subscriber = nh.subscribe(BALL_DETECTED_TOPIC, 1, ballDetectedCallback);
 	ros::ServiceClient sc_get_joint_conf = nh.serviceClient<pa10_dummy::getJointConfig>(SRV_GET_JOINT);
-	int frame_rate = 1;
 	pa10_dummy::getJointConfig srv;
+	ros::Rate loop_rate(7);
 
 	while (nh.ok() && !stopNode_) {
 		if (!stopRobot_){
-			// Get the global frame rate
-			ros::param::get(PARAM_FRAME_RATE, frame_rate);
-			ros::Rate loop_rate(frame_rate*3);
-			//ros::Rate loop_rate(frame_rate);
-
 			if (sc_get_joint_conf.call(srv)) {
 				std::size_t n = srv.response.positions.size();
 				rw::math::Q q(n);
 
-				//emit rwsLogMsg("Q: ", rw::common::Log::LogIndex::Info);
-				for (unsigned char i = 0; i < n; ++i){
+				for (unsigned char i = 0; i < n; ++i)
 					q(i) = srv.response.positions[i]/rw::math::Rad2Deg;
-					//std::stringstream q_string;
-					//q_string << q(i) << ", ";
-					//emit rwsLogMsg(q_string.str().c_str(), rw::common::Log::LogIndex::Info);
-				}
-				//emit rwsLogMsg("\n", rw::common::Log::LogIndex::Info);
-
 
 				emit qUpdated(q);
 			} else {
