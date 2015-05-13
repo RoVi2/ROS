@@ -45,9 +45,9 @@ using namespace rwlibs::proximitystrategies;
 #define ROBOT_NAME "PA10"
 
 //ROS Paths
-#define SUBSCRIBER "/balltracker/points"
+//#define SUBSCRIBER "/balltracker/points"
 //#define SUBSCRIBER "/points_server/points"
-//#define SUBSCRIBER "/kalman_filter/points"
+#define SUBSCRIBER "/kalman_filter/points"
 #define PARAM_DEBUGGING "/path_planning/debugging"
 #define PARAM_FRAME_RATE "/frame_rate"
 #define PARAM_PATH_NOT_FOUND_TIME_LIMIT "/path_planning/path_not_found_time_limit"

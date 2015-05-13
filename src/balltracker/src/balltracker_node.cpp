@@ -71,19 +71,19 @@ struct StereoPair {
  */
 void removeSmallBlobs(Mat& im, double size )
 {
-    // Find all contours
-    vector<vector<Point> > contours;
-    blur(im, im, cv::Size(9, 9));
-    findContours(im.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+	// Find all contours
+	vector<vector<Point> > contours;
+	blur(im, im, cv::Size(9, 9));
+	findContours(im.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
-    for (unsigned int i = 0; i < contours.size(); i++)
-    {
-        // Calculate contour area
-        double area = contourArea(contours[i]);
-        // Remove small objects by drawing the contour with black color
-        if (area > 0 && area <= size)
-            drawContours(im, contours, i, CV_RGB(0,0,0), -1);
-    }
+	for (unsigned int i = 0; i < contours.size(); i++)
+	{
+		// Calculate contour area
+		double area = contourArea(contours[i]);
+		// Remove small objects by drawing the contour with black color
+		if (area > 0 && area <= size)
+			drawContours(im, contours, i, CV_RGB(0,0,0), -1);
+	}
 }
 
 
@@ -117,8 +117,9 @@ bool findWhiteBall(cv::Mat const &img, cv::Point2d &center, double &circumferenc
 
 	// Filter each HSV channel and combine in single binary image.
 	cv::Mat filt_bin_img;
-	cv::inRange(hsv_img, cv::Scalar(25, 70, 100), cv::Scalar(100, 255, 255), filt_bin_img);
-	removeSmallBlobs(filt_bin_img, 1000);
+	//cv::inRange(hsv_img, cv::Scalar(25, 70, 100), cv::Scalar(100, 255, 255), filt_bin_img); //Green Ball
+	cv::inRange(hsv_img, Scalar(0, 160, 116), Scalar(60, 255, 255), filt_bin_img); //Red Disc
+	removeSmallBlobs(filt_bin_img, 500);
 
 	// Find contours.
 	std::vector<std::vector<cv::Point>> contours;
@@ -133,25 +134,22 @@ bool findWhiteBall(cv::Mat const &img, cv::Point2d &center, double &circumferenc
 
 			double radiusThreshold = 30;
 
-			if (circumference_tmp > 2*3.1416*radiusThreshold && area_tmp > 3.1416*radiusThreshold*radiusThreshold)
+			if (circumference_tmp > 2*M_PI*radiusThreshold && area_tmp > M_PI*radiusThreshold*radiusThreshold)
 			{
 				cv::Moments mom = cv::moments(contour, true);
 				area = area_tmp;
 				circumference = circumference_tmp;
 				center = cv::Point2d(mom.m10 / mom.m00, mom.m01 / mom.m00); // Mass center
 				double f = (4*M_PI*area)/(pow(circumference, 2));
-				if(f>0.4){
+				if(f>0.2)
 					return true;
-				}
 				else 
 					return false;
 			}
 		}
 	}
-	else {
+	else
 		center = cv::Point2d(0,0);
-		if (debugging) cout << "Ball not found!" << endl;
-	}
 
 	return false;
 }
@@ -300,7 +298,7 @@ void readCalibrationCameraRight(sensor_msgs::CameraInfo cameraInfo)
 	rectification.at<double>(2,2) = cameraInfo.R.at(8);
 
 	//Projection
- 	projection.at<double>(0,0) = cameraInfo.P.at(0);
+	projection.at<double>(0,0) = cameraInfo.P.at(0);
 	projection.at<double>(0,1) = cameraInfo.P.at(1);
 	projection.at<double>(0,2) = cameraInfo.P.at(2);
 	projection.at<double>(0,3) = cameraInfo.P.at(3);
@@ -372,9 +370,9 @@ geometry_msgs::Point triangulationOpenCV(cv::Point2d & tracked_point_left, cv::P
 	//Triangulate
 	//Check if there is a valid point and triangulate
 	if (!(tracked_point_left.x==0 && tracked_point_left.y==0) &&
-		!(tracked_point_right.x==0 && tracked_point_right.y==0) ){
+			!(tracked_point_right.x==0 && tracked_point_right.y==0) ){
 		cv::triangulatePoints(stereo_camera.left.projection, stereo_camera.right.projection,
-			cam0pnts, cam1pnts, pnts3D);
+				cam0pnts, cam1pnts, pnts3D);
 		//Show the results
 		if (debugging) cout << GREEN << "Left[" <<
 				tracked_point_left.x << ", " << tracked_point_left.y << "] " << MAGENTA << "Right[" <<
@@ -486,7 +484,7 @@ geometry_msgs::Point stereopsis(cv::Point & tracked_point, Mat imageLeft, Mat im
 			p1.y = erN.at<double>(1, 0);
 		} else {
 			double deltaA = (erN.at<double>(1, 0) - mrN.at<double>(1, 0))
-																							/ (erN.at<double>(0, 0) - mrN.at<double>(0, 0));
+																									/ (erN.at<double>(0, 0) - mrN.at<double>(0, 0));
 			double b = mrN.at<double>(1, 0) - deltaA * mrN.at<double>(0, 0);
 			p1.x = 0;
 			p1.y = b;
@@ -528,7 +526,7 @@ geometry_msgs::Point stereopsis(cv::Point & tracked_point, Mat imageLeft, Mat im
 	Mat mu1 = Cl(Range(0, 3), Range(0, 1)).cross(
 			M1inf(Range(0, 3), Range(0, 1))) / cv::norm(M1inf);
 	Mat v1 = M1inf(Range(0, 3), Range(0, 1))
-																				/ cv::norm(M1inf(Range(0, 3), Range(0, 1)));
+																						/ cv::norm(M1inf(Range(0, 3), Range(0, 1)));
 
 	//Compute the point of infinity for the second image and compute Plucker line parameters
 	cv::Mat M2inf = Pxr.inv(DECOMP_SVD) * m_r;
@@ -552,9 +550,9 @@ geometry_msgs::Point stereopsis(cv::Point & tracked_point, Mat imageLeft, Mat im
 
 	//Compute the closest point of intersection for the two lines of infinity
 	Mat M1 = (v1 * v2mu2T - (v1 * v2T) * v1 * v2mu1T)
-																				/ pow(cv::norm(v1.cross(v2)), 2) * v1 + v1.cross(mu1);
+																						/ pow(cv::norm(v1.cross(v2)), 2) * v1 + v1.cross(mu1);
 	Mat M2 = (v2 * v1mu1T - (v2 * v1T) * v2 * v1mu2T)
-																				/ pow(cv::norm(v2.cross(v1)), 2) * v2 + v2.cross(mu1);
+																						/ pow(cv::norm(v2.cross(v1)), 2) * v2 + v2.cross(mu1);
 
 	if (debugging) cout << endl << "Closest point on the two lines"<< endl << "M1: "
 			<< M1 << endl << "M2: " << M2 << endl;
@@ -634,17 +632,19 @@ int main(int argc, char *argv[])
 			success_l = findWhiteBall(img_left_undistorted, center_l, circum_l, area_l);
 			success_r = findWhiteBall(img_right_undistorted, center_r, circum_r, area_r);
 
-			if (success_l)
+			if (success_l){
 				cv::circle(img_left_undistorted, center_l, circum_l / (2 * M_PI), cv::Scalar(255, 0, 0), 3);
 				cv::circle(img_left_undistorted, center_l, 5, cv::Scalar(0, 255, 0), 3);
+			}
 			else {
 				center_l.x = 0;
 				center_l.y = 0;
 			}
 
-			if (success_r)
+			if (success_r){
 				cv::circle(img_right_undistorted, center_r, circum_r / (2 * M_PI), cv::Scalar(255, 0, 0), 3);
 				cv::circle(img_right_undistorted, center_r, 5, cv::Scalar(0, 255, 0), 3);
+			}
 			else {
 				center_r.x = 0;
 				center_r.y = 0;
@@ -657,9 +657,11 @@ int main(int argc, char *argv[])
 			if (view_images) pub_right.publish(msg_right);
 
 			geometry_msgs::PointStamped pointToPublish;
-			pointToPublish.point = triangulationOpenCV(center_l, center_r);
-			pointToPublish.header.frame_id = "Camera";
-			pub_points.publish(pointToPublish);
+			if (success_l && success_r){
+				pointToPublish.point = triangulationOpenCV(center_l, center_r);
+				pointToPublish.header.frame_id = "Camera";
+				pub_points.publish(pointToPublish);
+			}
 
 		}
 		//Sleep baby, sleep
