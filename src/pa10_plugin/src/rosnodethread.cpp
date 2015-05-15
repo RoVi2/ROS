@@ -8,7 +8,8 @@
 
 #define PARAM_FRAME_RATE "/frame_rate"
 #define BALL_PREDICTED_TOPIC "/kalman_filter/points"
-#define BALL_DETECTED_TOPIC "/points_server/points"
+//#define BALL_DETECTED_TOPIC "/points_server/points"
+#define BALL_DETECTED_TOPIC "/balltracker/points"
 //#define SRV_GET_JOINT "pa10/getJointConfig"
 #define SRV_GET_JOINT "/getJointConfig"
 
@@ -51,7 +52,7 @@ void RosNodeThread::run()
 	ros::Subscriber ball_detected_subscriber = nh.subscribe(BALL_DETECTED_TOPIC, 1, ballDetectedCallback);
 	ros::ServiceClient sc_get_joint_conf = nh.serviceClient<pa10_dummy::getJointConfig>(SRV_GET_JOINT);
 	pa10_dummy::getJointConfig srv;
-	ros::Rate loop_rate(7);
+	ros::Rate loop_rate(2);
 
 	while (nh.ok() && !stopNode_) {
 		if (!stopRobot_){
@@ -72,7 +73,7 @@ void RosNodeThread::run()
 			emit ballPredictedUpdated(ballPredictedTransformation);
 			emit ballDetectedUpdated(ballDetectedTransformation);
 
-			ros::spinOnce();
+			ros::AsyncSpinner(0).start();
 			loop_rate.sleep();
 		}
 	}

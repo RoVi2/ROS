@@ -174,10 +174,9 @@ int main(int argc, char **argv)
 			point_predicted.header.frame_id = point_original.header.frame_id;
 			point_predicted.header.stamp = point_original.header.stamp;
 
-			cout << "[ " << MAGENTA << point_predicted.point.x << ", "
+			cout << endl << "[ " << MAGENTA << point_predicted.point.x << ", "
 					<< CYAN <<  point_predicted.point.y << ", "
-					<< GREEN <<  point_predicted.point.z << RESET << "]"
-					<< endl;
+					<< GREEN <<  point_predicted.point.z << RESET << "]";
 
 			point_pub.publish(point_predicted);
 

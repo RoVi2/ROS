@@ -97,7 +97,7 @@ void PA10Plugin::setBallPredictedTransformation(Transform3D<> transformation){
 	ballPredictedFrame_ = static_cast<MovableFrame*>(workcell_->findFrame("BallPredicted"));
 	if (ballDetectedFrame_!=NULL){
 		//Move it relative to its parent's parent
-		ballPredictedFrame_->moveTo(transformation, ballPredictedFrame_->getParent(), state_);
+		ballPredictedFrame_->moveTo(transformation, workcell_->findFrame("Camera"), state_);
 		//Update the rws
 		getRobWorkStudio()->setState(state_);
 	}
@@ -108,7 +108,7 @@ void PA10Plugin::setBallDetectedTransformation(Transform3D<> transformation){
 	ballDetectedFrame_ = static_cast<MovableFrame*>(workcell_->findFrame("BallDetected"));
 	if (ballDetectedFrame_!=NULL){
 		//Move it relative to its parent's parent
-		ballDetectedFrame_->moveTo(transformation, ballDetectedFrame_->getParent(), state_);
+		ballDetectedFrame_->moveTo(transformation, workcell_->findFrame("Camera"), state_);
 		//Update the rws
 		getRobWorkStudio()->setState(state_);
 	}

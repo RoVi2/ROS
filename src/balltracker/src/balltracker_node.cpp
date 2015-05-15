@@ -117,16 +117,17 @@ bool findWhiteBall(cv::Mat const &img, cv::Point2d &center, double &circumferenc
 
 	// Filter each HSV channel and combine in single binary image.
 	cv::Mat filt_bin_img;
-	//cv::inRange(hsv_img, cv::Scalar(25, 70, 100), cv::Scalar(100, 255, 255), filt_bin_img); //Green Ball
-	cv::inRange(hsv_img, Scalar(0, 160, 116), Scalar(60, 255, 255), filt_bin_img); //Red Disc
-	removeSmallBlobs(filt_bin_img, 500);
+
+	cv::inRange(hsv_img, cv::Scalar(25, 70, 100), cv::Scalar(100, 255, 255), filt_bin_img);
+	morphologyEx(filt_bin_img, filt_bin_img, 0, getStructuringElement(0, Size(9,9), Point(4,4)));
+    morphologyEx(filt_bin_img, filt_bin_img, 1, getStructuringElement(0, Size(9,9), Point(4,4)));
+	//removeSmallBlobs(filt_bin_img, 1000);
 
 	// Find contours.
 	std::vector<std::vector<cv::Point>> contours;
 	cv::findContours(filt_bin_img, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
 
 	// Examine each contour. Only large ones are recognized as the ball.
-	// TODO Only the center of first the first contour fitting is returned.
 	if (!contours.empty()){
 		for (auto const &contour : contours) {
 			double circumference_tmp = cv::arcLength(contour, true);

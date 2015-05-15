@@ -62,7 +62,7 @@
 
 	<Frame name="WPtable" refframe="WORLD">
 		<RPY> 0 0 0 </RPY>
-		<Pos> 0 -1.10 -0.02 </Pos>
+		<Pos> 0 -1.10 1.02 </Pos>
 		<Drawable name="WPtablegeo" refframe="WPtable">
 			<Polytope file="Geometry/WPtable" />
 		</Drawable>
