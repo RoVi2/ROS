@@ -19,14 +19,10 @@
 #include <geometry_msgs/PointStamped.h>
 
 //Services
-/*#include <path_planning/getJointConfig.h>
-#include <path_planning/setJointConfig.h>
-#include <path_planning/addToQueue.h>
-#include <path_planning/addToQueue.h>*/
+//#include <path_planning/getJointConfig.h>
+//#include <path_planning/setJointConfig.h>
  #include <pa10controller/getJointConfig.h>
 #include <pa10controller/setJointConfig.h>
-#include <pa10controller/addToQueue.h>
-#include <pa10controller/addToQueue.h>
 
 using namespace std;
 using namespace rw::common;
