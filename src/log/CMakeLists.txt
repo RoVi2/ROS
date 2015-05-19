@@ -10,8 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
 	path_planning
 )
 
-## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost COMPONENTS system filesystem iostreams REQUIRED)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -95,7 +94,12 @@ catkin_package(
 #set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(
 	${catkin_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS}
 )
+
+# Compiler flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall") # -pedantic
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2") # -Wextra -Werror
 
 ## Declare a cpp library
 # add_library(log
@@ -103,7 +107,7 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(log_node src/log_node.cpp)
+add_executable(log_node src/log_node.cpp src/gnuplot-iostream.h)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -113,6 +117,7 @@ add_executable(log_node src/log_node.cpp)
 ## Specify libraries to link a library or executable target against
 target_link_libraries(log_node
   ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
 )
 
 #############
