@@ -4,9 +4,10 @@ project(log)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED
+find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	std_msgs
+	path_planning
 )
 
 ## System dependencies are found with CMake's conventions
@@ -79,9 +80,9 @@ find_package(catkin REQUIRED
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+#	INCLUDE_DIRS include
 #  LIBRARIES log
-#  CATKIN_DEPENDS other_catkin_pkg
+  CATKIN_DEPENDS path_planning
 #  DEPENDS system_lib
 )
 
@@ -91,7 +92,10 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories(include)
+#set(CMAKE_INCLUDE_CURRENT_DIR ON)
+include_directories(
+	${catkin_INCLUDE_DIRS}
+)
 
 ## Declare a cpp library
 # add_library(log
@@ -103,7 +107,8 @@ add_executable(log_node src/log_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-add_dependencies(log_node log_generate_messages_cpp)
+#add_dependencies(log_node log_generate_messages_cpp )
+#add_dependencies(log_node)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(log_node

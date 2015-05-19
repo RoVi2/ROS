@@ -1,8 +1,0 @@
-#request constants
-
-#request fields
-bool command
----
-#response constants
-#response fields
-bool result

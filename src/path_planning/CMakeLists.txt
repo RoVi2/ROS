@@ -5,10 +5,10 @@ project(path_planning)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  message_generation
-  std_msgs
-	roscpp
-  pa10controller
+  	message_generation
+  	std_msgs
+    roscpp
+  	pa10controller
 )
 
 ## System dependencies are found with CMake's conventions
@@ -45,11 +45,10 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  Q.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -70,10 +69,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  std_msgs  # Or other packages containing msgs
-)
+ generate_messages(
+   DEPENDENCIES
+   std_msgs  # Or other packages containing msgs
+ )
 
 ###################################
 ## catkin specific configuration ##
@@ -87,7 +86,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES path_planning
-#  CATKIN_DEPENDS other_catkin_pkg
+  CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
 
@@ -140,34 +139,18 @@ ENDIF(NOT ROBWORKSTUDIO_FOUND)
 INCLUDE_DIRECTORIES( ${ROBWORK_INCLUDE_DIRS} ${ROBWORKSTUDIO_INCLUDE_DIRS} )
 LINK_DIRECTORIES( ${ROBWORK_LIBRARY_DIRS} ${ROBWORKSTUDIO_LIBRARY_DIRS} ${catkin_LIBRARIES})
 
-# if we want to use ui files add them here
-SET(UIS_FILES src/SampleWidget.ui )
-
-QT4_WRAP_UI(UIS_OUT_H ${UIS_FILES})
-
-QT4_WRAP_CPP(MocSrcFiles src/SamplePlugin.hpp src/SampleWidget.hpp
-OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
-)
-# Rcc the files:
-
-#QT4_WRAP_CPP(sources $
-
-#{moc-sources}
-#OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED)
-
-#QT4_ADD_RESOURCES(RccSrcFiles resources.qrc)
-set(SrcFiles
-	src/path_planning_node.cpp
-)
+# set(SrcFiles
+# 	src/path_planning_node.cpp
+# )
 
 
-set(ROS_BUILD_STATIC_LIBS false)
-set(ROS_BUILD_SHARED_LIBS true)
+#set(ROS_BUILD_STATIC_LIBS false)
+#set(ROS_BUILD_SHARED_LIBS true)
 
 ## Declare a cpp executable
 add_executable(path_planning_node src/path_planning_node.cpp)
 #add_dependencies(path_planning_node path_planning_generate_messages_cpp)
-add_dependencies(path_planning_node pa10controller)
+add_dependencies(path_planning_node pa10controller path_planning_generate_messages_cpp)
 target_link_libraries(path_planning_node ${catkin_LIBRARIES} ${ROBWORK_LIBRARIES})
 
 list(APPEND CMAKE_CXX_FLAGS "-std=c++0x  -g -O3 -ftest-coverage -fprofile-arcs")

@@ -8,7 +8,7 @@ SET(RWSTUDIO_ROOT "$ENV{RWS_ROOT}")
 find_package(catkin REQUIRED COMPONENTS
     roscpp
     rospy
-    pa10_dummy
+    pa10controller
 )
 
 #Include default settings for constructing a robwork dependent project
@@ -35,7 +35,9 @@ IF(NOT ROBWORKSTUDIO_FOUND)
   INCLUDE(${RWSTUDIO_ROOT}/build/FindRobWorkStudio.cmake)
 ENDIF(NOT ROBWORKSTUDIO_FOUND)
 
-catkin_package()
+catkin_package(
+  CATKIN_DEPENDS pa10controller
+  )
 
 # Search directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -61,6 +63,6 @@ QT4_WRAP_UI(forms_headers ${forms})
 
 # Plugin target
 add_library(${PROJECT_NAME} MODULE ${sources} ${headers} ${headers_moc} ${forms_headers} ${resources_rcc})
-add_dependencies(${PROJECT_NAME} pa10_dummy)
+#add_dependencies(${PROJECT_NAME} pa10_dummy)
 target_link_libraries(${PROJECT_NAME} ${QT_LIBRARIES} ${catkin_LIBRARIES} ${ROBWORK_LIBRARIES} ${ROBWORKSTUDIO_LIBRARIES})
 # install(TARGETS ros_rws_plugin RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

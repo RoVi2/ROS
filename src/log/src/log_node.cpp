@@ -7,14 +7,12 @@
 #include <ros/ros.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <path_planning/Q.h>
 
 //STD
 #include <iostream>
 #include <fstream>
 #include <vector>
-
-//Robot
-#include <pa10controller/getJointConfig.h>
 
 using namespace std;
 
@@ -27,12 +25,12 @@ using namespace std;
 #define PARAM_DEBUGGING "/points_server/debugging"
 #define PARAM_FRAME_RATE "/frame_rate"
 
-geometry_msgs::PointStamped_<float> ball_point;
-geometry_msgs::PointStamped_<float> kalman_point;
-geometry_msgs::PoseStamped_<float> camera_pose;
-geometry_msgs::PoseStamped_<float> camera_pose_real;
+geometry_msgs::PointStamped ball_point;
+geometry_msgs::PointStamped kalman_point;
+geometry_msgs::PoseStamped camera_pose;
+geometry_msgs::PoseStamped camera_pose_real;
 
-void callbackBall(geometry_msgs::PointStamped_<float> point){
+void callbackBall(const geometry_msgs::PointStamped & point){
 	ball_point.header.frame_id = point.header.frame_id;
 	ball_point.header.seq = point.header.seq;
 	ball_point.header.stamp = point.header.stamp;
@@ -41,7 +39,7 @@ void callbackBall(geometry_msgs::PointStamped_<float> point){
 	ball_point.point.z = point.point.z;
 }
 
-void callbackKalman(geometry_msgs::PointStamped_<float> point){
+void callbackKalman(const geometry_msgs::PointStamped & point){
 	kalman_point.header.frame_id = point.header.frame_id;
 	kalman_point.header.seq = point.header.seq;
 	kalman_point.header.stamp = point.header.stamp;
@@ -50,7 +48,7 @@ void callbackKalman(geometry_msgs::PointStamped_<float> point){
 	kalman_point.point.z = point.point.z;
 }
 
-void callbackCameraPose(geometry_msgs::PoseStamped_<float> pose){
+void callbackCameraPose(const geometry_msgs::PoseStamped & pose){
 	camera_pose.header.frame_id = pose.header.frame_id;
 	camera_pose.header.seq = pose.header.seq;
 	camera_pose.header.stamp = pose.header.stamp;
@@ -63,7 +61,7 @@ void callbackCameraPose(geometry_msgs::PoseStamped_<float> pose){
 	camera_pose.pose.position.z = pose.pose.position.z;
 }
 
-void callbackCameraPoseReal(geometry_msgs::PoseStamped_<float> pose){
+void callbackCameraPoseReal(const geometry_msgs::PoseStamped & pose){
 	camera_pose_real.header.frame_id = pose.header.frame_id;
 	camera_pose_real.header.seq = pose.header.seq;
 	camera_pose_real.header.stamp = pose.header.stamp;
@@ -85,14 +83,10 @@ int main(int argc, char **argv)
 	ros::NodeHandle nh;
 
 	//Subscribers
-	ros::Subscriber(SUB_BALL, 1, callbackBall);
-	ros::Subscriber(SUB_BALL, 1, callbackKalman);
-	ros::Subscriber(SUB_BALL, 1, callbackCameraPose);
-	ros::Subscriber(SUB_BALL, 1, callbackCameraPoseReal);
-	//Services
-	ros::ServiceClient client_getJointConfig =
-			nh.serviceClient<pa10controller::getJointConfig>(SRV_GET_JOINT);
-	pa10controller::getJointConfig srv_getJointConfig;
+	ros::Subscriber ball_sub = nh.subscribe(SUB_BALL, 1, callbackBall);
+	ros::Subscriber kalman_sub = nh.subscribe(SUB_BALL, 1, callbackKalman);
+	ros::Subscriber camera_pose_sub = nh.subscribe(SUB_BALL, 1, callbackCameraPose);
+	ros::Subscriber camera_pose_sub_real = nh.subscribe(SUB_BALL, 1, callbackCameraPoseReal);
 
 	//Debugging parameter
 	bool debugging = true;
@@ -120,10 +114,6 @@ int main(int argc, char **argv)
 
 		//Q real robot
 		float Q_real[7];
-		if (client_getJointConfig.call(srv_getJointConfig)){
-			for (unsigned char joint = 0; joint < 7; ++joint)
-				Q_real[joint] = srv_getJointConfig.response.positions[joint];
-		}
 
 		//And sleep
 		loop_rate.sleep();
