@@ -18,6 +18,7 @@
   <build_depend>cv_bridge</build_depend>
   <build_depend>image_transport</build_depend>
   <build_depend>opencv2</build_depend>
+  <build_depend>pa10controller</build_depend>
 
   <run_depend>roscpp</run_depend>
   <run_depend>rospy</run_depend>
@@ -28,5 +29,6 @@
   <run_depend>cv_bridge</run_depend>
   <run_depend>image_transport</run_depend>
   <run_depend>opencv2</run_depend>
+  <run_depend>pa10controller</run_depend>
 
 </package>

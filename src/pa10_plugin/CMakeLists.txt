@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 	std_msgs
 	cv_bridge
 	image_transport
-	pa10_dummy
+	pa10controller
 )
 find_package(OpenCV REQUIRED)
 
@@ -40,7 +40,9 @@ IF(NOT ROBWORKSTUDIO_FOUND)
   INCLUDE(${RWSTUDIO_ROOT}/build/FindRobWorkStudio.cmake)
 ENDIF(NOT ROBWORKSTUDIO_FOUND)
 
-catkin_package()
+catkin_package(
+	CATKIN_DEPENDS pa10controller
+)
 
 # Search directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -71,7 +73,6 @@ QT4_WRAP_UI(forms_headers ${forms})
 
 # Plugin target
 add_library(${PROJECT_NAME} MODULE ${sources} ${headers} ${headers_moc} ${forms_headers} ${resources_rcc})
-add_dependencies(${PROJECT_NAME} pa10_dummy)
 target_link_libraries(${PROJECT_NAME}
 						${QT_LIBRARIES}
 						${catkin_LIBRARIES}
