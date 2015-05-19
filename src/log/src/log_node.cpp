@@ -7,7 +7,8 @@
 #include <ros/ros.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseStamped.h>
-#include <path_planning/Q.h>
+#include <path_planning/Q_real.h>
+#include <path_planning/Q_desired.h>
 
 //STD
 #include <iostream>
@@ -19,8 +20,10 @@ using namespace std;
 //ROS Paths
 #define SUB_BALL "balltracker/points"
 #define SUB_KALMAN "kalman_filter/points"
-#define SUB_CAMERA_POS "path_planning/camera_transformation"
-#define SUB_CAMERA_POS_REAL "path_planning/camera_transformation"
+#define SUB_CAMERA_POS_DESIRED "path_planning/camera_pose_desired"
+#define SUB_CAMERA_POS_REAL "path_planning/camera_pose_real"
+#define SUB_Q_DESIRED "path_planning/q_desired"
+#define SUB_Q_REAL "path_planning/q_real"
 #define SRV_GET_JOINT "/getJointConfig"
 #define PARAM_DEBUGGING "/points_server/debugging"
 #define PARAM_FRAME_RATE "/frame_rate"
@@ -29,7 +32,13 @@ geometry_msgs::PointStamped ball_point;
 geometry_msgs::PointStamped kalman_point;
 geometry_msgs::PoseStamped camera_pose;
 geometry_msgs::PoseStamped camera_pose_real;
+float Q_real[7];
+float Q_desired[7];
 
+/**
+ * Callback for the ball's position
+ * @param point
+ */
 void callbackBall(const geometry_msgs::PointStamped & point){
 	ball_point.header.frame_id = point.header.frame_id;
 	ball_point.header.seq = point.header.seq;
@@ -39,6 +48,10 @@ void callbackBall(const geometry_msgs::PointStamped & point){
 	ball_point.point.z = point.point.z;
 }
 
+/**
+ * Callback for the kalman's point position
+ * @param point
+ */
 void callbackKalman(const geometry_msgs::PointStamped & point){
 	kalman_point.header.frame_id = point.header.frame_id;
 	kalman_point.header.seq = point.header.seq;
@@ -48,7 +61,11 @@ void callbackKalman(const geometry_msgs::PointStamped & point){
 	kalman_point.point.z = point.point.z;
 }
 
-void callbackCameraPose(const geometry_msgs::PoseStamped & pose){
+/**
+ * Callback for the Camera Pose Desired
+ * @param pose
+ */
+void callbackCameraPoseDesired(const geometry_msgs::PoseStamped & pose){
 	camera_pose.header.frame_id = pose.header.frame_id;
 	camera_pose.header.seq = pose.header.seq;
 	camera_pose.header.stamp = pose.header.stamp;
@@ -61,6 +78,10 @@ void callbackCameraPose(const geometry_msgs::PoseStamped & pose){
 	camera_pose.pose.position.z = pose.pose.position.z;
 }
 
+/**
+* Callback for the Camera Pose Real
+ * @param pose
+ */
 void callbackCameraPoseReal(const geometry_msgs::PoseStamped & pose){
 	camera_pose_real.header.frame_id = pose.header.frame_id;
 	camera_pose_real.header.seq = pose.header.seq;
@@ -74,6 +95,31 @@ void callbackCameraPoseReal(const geometry_msgs::PoseStamped & pose){
 	camera_pose_real.pose.position.z = pose.pose.position.z;
 }
 
+/**
+ * Callback for the Q desired
+ * @param q
+ */
+void callbackQdesired(const path_planning::Q_desired & q){
+	for (unsigned char joint = 0; joint < 7; ++joint)
+		Q_desired[joint] = q.positions[joint];
+}
+
+/**
+ * Callback for the Q real
+ * @param q
+ */
+void callbackQreal(const path_planning::Q_real & q){
+	for (unsigned char joint = 0; joint < 7; ++joint)
+		Q_real[joint] = q.positions[joint];
+}
+
+
+/**
+ *
+ * @param argc
+ * @param argv
+ * @return
+ */
 int main(int argc, char **argv)
 {
 	ROS_INFO("Log Started!");
@@ -83,10 +129,12 @@ int main(int argc, char **argv)
 	ros::NodeHandle nh;
 
 	//Subscribers
-	ros::Subscriber ball_sub = nh.subscribe(SUB_BALL, 1, callbackBall);
-	ros::Subscriber kalman_sub = nh.subscribe(SUB_BALL, 1, callbackKalman);
-	ros::Subscriber camera_pose_sub = nh.subscribe(SUB_BALL, 1, callbackCameraPose);
-	ros::Subscriber camera_pose_sub_real = nh.subscribe(SUB_BALL, 1, callbackCameraPoseReal);
+	ros::Subscriber sub_ball = nh.subscribe(SUB_BALL, 1, callbackBall);
+	ros::Subscriber sub_kalman = nh.subscribe(SUB_BALL, 1, callbackKalman);
+	ros::Subscriber sub_camera_pose_desired = nh.subscribe(SUB_BALL, 1, callbackCameraPoseDesired);
+	ros::Subscriber sub_camera_pose_real = nh.subscribe(SUB_BALL, 1, callbackCameraPoseReal);
+	ros::Subscriber sub_q_desired = nh.subscribe(SUB_Q_DESIRED, 1, callbackQdesired);
+	ros::Subscriber sub_q_real = nh.subscribe(SUB_Q_REAL, 1, callbackQreal);
 
 	//Debugging parameter
 	bool debugging = true;
@@ -112,8 +160,7 @@ int main(int argc, char **argv)
 		ros::param::get(PARAM_FRAME_RATE, frame_rate);
 		ros::Rate loop_rate(frame_rate);
 
-		//Q real robot
-		float Q_real[7];
+		//TODO
 
 		//And sleep
 		loop_rate.sleep();

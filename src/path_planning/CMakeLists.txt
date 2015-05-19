@@ -47,7 +47,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  Q.msg
+  Q_desired.msg
+  Q_real.msg
 )
 
 ## Generate services in the 'srv' folder
