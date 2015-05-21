@@ -298,52 +298,56 @@ int main(int argc, char** argv)
 		/*
 		 * Publish all the messages
 		 */
-		//Q_desired
-		path_planning::Q_desired msg_q_desired;
-		for (unsigned char joint = 0; joint < 7; ++joint)
-			msg_q_desired.positions[joint] = qVectorSolutionIK[0][joint];
-		pub_q_desired.publish(msg_q_desired);
+		if (!qVectorSolutionIK.empty()){
+			//Q_desired
+			path_planning::Q_desired msg_q_desired;
 
-		//Q_real
-		path_planning::Q_real msg_q_real;
-		Q q_real(7);
-		client_getJointConfig.call(srv_getJointConfig);
-		for (unsigned char joint = 0; joint < 7; ++joint){
-			msg_q_real.positions[joint] = srv_getJointConfig.response.positions[joint]*Deg2Rad;
-			q_real(joint) = srv_getJointConfig.response.positions[joint]*Deg2Rad;
+			for (unsigned char joint = 0; joint < 7; ++joint)
+				msg_q_desired.positions[joint] = qVectorSolutionIK[0][joint];
+			pub_q_desired.publish(msg_q_desired);
+
+			//Q_real
+			path_planning::Q_real msg_q_real;
+			Q q_real(7);
+			client_getJointConfig.call(srv_getJointConfig);
+			for (unsigned char joint = 0; joint < 7; ++joint){
+				msg_q_real.positions[joint] = srv_getJointConfig.response.positions[joint]*Deg2Rad;
+				q_real(joint) = srv_getJointConfig.response.positions[joint]*Deg2Rad;
+			}
+			pub_q_real.publish(msg_q_real);
+
+
+			//Camera Pose Desired
+			device->setQ(qVectorSolutionIK[0], state);//Change the robot's state to the desired Q
+			geometry_msgs::PoseStamped camera_pose_desired;
+			Transform3D<> camera_pose_desired_transformation = Transform3D<>(wc->findFrame("Camera")->getTransform(state));
+			Quaternion<> camera_pose_desired_quaternion = Quaternion<>(camera_pose_desired_transformation.R()) ;
+			camera_pose_desired.header.stamp.sec = walltime.now().sec;
+			camera_pose_desired.pose.position.x = camera_pose_desired_transformation.P()[0];
+			camera_pose_desired.pose.position.y = camera_pose_desired_transformation.P()[1];
+			camera_pose_desired.pose.position.z = camera_pose_desired_transformation.P()[2];
+			camera_pose_desired.pose.orientation.x = camera_pose_desired_quaternion.getQx();
+			camera_pose_desired.pose.orientation.y = camera_pose_desired_quaternion.getQy();
+			camera_pose_desired.pose.orientation.z = camera_pose_desired_quaternion.getQz();
+			camera_pose_desired.pose.orientation.w = camera_pose_desired_quaternion.getQw();
+			pub_camera_pose_desired.publish(camera_pose_desired);
+
+
+			//Camera Pose real
+			geometry_msgs::PoseStamped camera_pose_real;
+			device->setQ(q_real, state); //Change the robot's state to the real Q
+			Transform3D<> camera_pose_real_transformation = Transform3D<>(wc->findFrame("Camera")->getTransform(state));
+			Quaternion<> camera_pose_real_quaternion = Quaternion<>(camera_pose_real_transformation.R()) ;
+			camera_pose_real.header.stamp.sec = walltime.now().sec;
+			camera_pose_real.pose.position.x = camera_pose_real_transformation.P()[0];
+			camera_pose_real.pose.position.y = camera_pose_real_transformation.P()[1];
+			camera_pose_real.pose.position.z = camera_pose_real_transformation.P()[2];
+			camera_pose_real.pose.orientation.x = camera_pose_real_quaternion.getQx();
+			camera_pose_real.pose.orientation.y = camera_pose_real_quaternion.getQy();
+			camera_pose_real.pose.orientation.z = camera_pose_real_quaternion.getQz();
+			camera_pose_real.pose.orientation.w = camera_pose_real_quaternion.getQw();
+			pub_camera_pose_real.publish(camera_pose_real);
 		}
-		pub_q_real.publish(msg_q_real);
-
-
-		//Camera Pose Desired
-		device->setQ(qVectorSolutionIK[0], state);//Change the robot's state to the desired Q
-		geometry_msgs::PoseStamped camera_pose_desired;
-		Transform3D<> camera_pose_desired_transformation = Transform3D<>(wc->findFrame("Camera")->getTransform(state));
-		Quaternion<> camera_pose_desired_quaternion = Quaternion<>(camera_pose_desired_transformation.R()) ;
-		camera_pose_desired.header.stamp.sec = walltime.now().sec;
-		camera_pose_desired.pose.position.x = camera_pose_desired_transformation.P()[0];
-		camera_pose_desired.pose.position.y = camera_pose_desired_transformation.P()[1];
-		camera_pose_desired.pose.position.z = camera_pose_desired_transformation.P()[2];
-		camera_pose_desired.pose.orientation.x = camera_pose_desired_quaternion.getQx();
-		camera_pose_desired.pose.orientation.y = camera_pose_desired_quaternion.getQy();
-		camera_pose_desired.pose.orientation.z = camera_pose_desired_quaternion.getQz();
-		camera_pose_desired.pose.orientation.w = camera_pose_desired_quaternion.getQw();
-		pub_camera_pose_desired.publish(camera_pose_desired);
-
-		//Camera Pose real
-		geometry_msgs::PoseStamped camera_pose_real;
-		device->setQ(q_real, state); //Change the robot's state to the real Q
-		Transform3D<> camera_pose_real_transformation = Transform3D<>(wc->findFrame("Camera")->getTransform(state));
-		Quaternion<> camera_pose_real_quaternion = Quaternion<>(camera_pose_real_transformation.R()) ;
-		camera_pose_real.header.stamp.sec = walltime.now().sec;
-		camera_pose_real.pose.position.x = camera_pose_real_transformation.P()[0];
-		camera_pose_real.pose.position.y = camera_pose_real_transformation.P()[1];
-		camera_pose_real.pose.position.z = camera_pose_real_transformation.P()[2];
-		camera_pose_real.pose.orientation.x = camera_pose_real_quaternion.getQx();
-		camera_pose_real.pose.orientation.y = camera_pose_real_quaternion.getQy();
-		camera_pose_real.pose.orientation.z = camera_pose_real_quaternion.getQz();
-		camera_pose_real.pose.orientation.w = camera_pose_real_quaternion.getQw();
-		pub_camera_pose_real.publish(camera_pose_real);
 
 		loop_rate.sleep();
 		ros::spinOnce();
