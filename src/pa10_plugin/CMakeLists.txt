@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
     roscpp
     rospy
     pa10controller
+    pa10_dummy
 )
 
 #Include default settings for constructing a robwork dependent project

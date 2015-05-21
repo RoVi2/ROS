@@ -697,17 +697,17 @@ int main(int argc, char **argv)
 
 #endif
 	//ros::NodeHandle nodehandle;
-	//startnode_service = nodehandle.advertiseService("pa10/start", startNode_service);
-	//stopnode_service = nodehandle.advertiseService("pa10/stop", stopNode_service);
-	//resetnode_service = nodehandle.advertiseService("pa10/reset", resetNode_service);
+	//startnode_service = nodehandle.advertiseService("/start", startNode_service);
+	//stopnode_service = nodehandle.advertiseService("/stop", stopNode_service);
+	//resetnode_service = nodehandle.advertiseService("/reset", resetNode_service);
 
 	ROS_INFO("Starting services.");
 	ros::NodeHandle nodehandle;
 	//startnode_service.shutdown();
-	getjointconfigservice = nodehandle.advertiseService("pa10/getJointConfig", getJointConfig_service);
-	setjointsservice = nodehandle.advertiseService("pa10/setJointsConfig", setJoints_service);
-	addToQueueService = nodehandle.advertiseService("pa10/addItemtoQueue", addtoQueue_service);
-	clearJointQueueService = nodehandle.advertiseService("pa10/clearJointQueue", clearJointQueue_service);
+	getjointconfigservice = nodehandle.advertiseService("/getJointConfig", getJointConfig_service);
+	setjointsservice = nodehandle.advertiseService("/setJointsConfig", setJoints_service);
+	addToQueueService = nodehandle.advertiseService("/addItemtoQueue", addtoQueue_service);
+	clearJointQueueService = nodehandle.advertiseService("/clearJointQueue", clearJointQueue_service);
 
 	ROS_INFO("PA10 Server is idle.");
 

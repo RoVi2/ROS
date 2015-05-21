@@ -603,7 +603,7 @@ int main(int argc, char *argv[])
 	nh.setParam(PARAM_DEBUGGING, true);
 	nh.setParam(PARAM_VIEW_IMAGES, true);
 
-	int frame_rate=25;
+	int frame_rate=5;
 	nh.setParam(PARAM_FRAME_RATE, frame_rate);
 
 	if (debugging) cout << "Balltracker started!" << endl;

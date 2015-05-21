@@ -15,8 +15,8 @@
 using namespace std;
 
 //ROS Paths
-#define TOPIC "/points_server/points"
-#define PARAM_DEBUGGING "/points_server/debugging"
+#define TOPIC "/balltracker/points"
+#define PARAM_DEBUGGING "/balltracker/debugging"
 #define PARAM_FRAME_RATE "/frame_rate"
 #define FILE_PATH "res/points.txt"
 
@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 	bool debugging = false;
 	nh.setParam(PARAM_DEBUGGING, false);
 
-	int frame_rate = 1;
+	int frame_rate = 5;
 	nh.setParam(PARAM_FRAME_RATE, frame_rate);
 
 	//Point to store the prediction
