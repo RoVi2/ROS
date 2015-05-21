@@ -25,6 +25,7 @@ using namespace std;
 
 //ROS Paths
 #define SUB_BALL "balltracker/points"
+#define SUB_BALL "balltracker/points"
 #define SUB_KALMAN "kalman_filter/points"
 #define SUB_CAMERA_POS_DESIRED "path_planning/camera_pose_desired"
 #define SUB_CAMERA_POS_REAL "path_planning/camera_pose_real"
@@ -49,26 +50,26 @@ float Q_desired[7];
 class FileWriter
 {
 public:
-    typedef geometry_msgs::PointStamped point_type_;
+	typedef geometry_msgs::PointStamped point_type_;
 
-    FileWriter(std::string const &filename)
-        : ofs_(filename)
-    {
-        ofs_ << "ball_x, ball_y, ball_z" << std::endl;
-    }
+	FileWriter(std::string const &filename)
+	: ofs_(filename)
+	{
+		ofs_ << "ball_x, ball_y, ball_z" << std::endl;
+	}
 
-    ~FileWriter()
-    {
-        ofs_.close();
-    }
+	~FileWriter()
+	{
+		ofs_.close();
+	}
 
-    void write(point_type_ ball)
-    {
-        ofs_ << ball.point.x << ", " << ball.point.y << ", " << ball.point.z << std::endl;
-    }
+	void write(point_type_ ball)
+	{
+		ofs_ << ball.point.x << ", " << ball.point.y << ", " << ball.point.z << std::endl;
+	}
 
 private:
-    std::ofstream ofs_;
+	std::ofstream ofs_;
 };
 
 // Tells gnuplot-iostream how to print objects of class geometry_msgs::PointStamped.
@@ -77,22 +78,22 @@ namespace gnuplotio
 
 template<>
 struct BinfmtSender<geometry_msgs::PointStamped> {
-    static void send(std::ostream &stream)
-    {
-        BinfmtSender<double>::send(stream);
-        BinfmtSender<double>::send(stream);
-        BinfmtSender<double>::send(stream);
-    }
+	static void send(std::ostream &stream)
+	{
+		BinfmtSender<double>::send(stream);
+		BinfmtSender<double>::send(stream);
+		BinfmtSender<double>::send(stream);
+	}
 };
 
 template<>
 struct BinarySender<geometry_msgs::PointStamped> {
-    static void send(std::ostream &stream, geometry_msgs::PointStamped const &ps)
-    {
-        BinarySender<double>::send(stream, ps.point.x);
-        BinarySender<double>::send(stream, ps.point.y);
-        BinarySender<double>::send(stream, ps.point.z);
-    }
+	static void send(std::ostream &stream, geometry_msgs::PointStamped const &ps)
+	{
+		BinarySender<double>::send(stream, ps.point.x);
+		BinarySender<double>::send(stream, ps.point.y);
+		BinarySender<double>::send(stream, ps.point.z);
+	}
 };
 
 } // namespace gnuplotio
@@ -109,12 +110,12 @@ void callbackBall(const geometry_msgs::PointStamped & point){
 	ball_point.point.y = point.point.y;
 	ball_point.point.z = point.point.z;
 
-    std::lock_guard<std::mutex> lock(g_mutex_ball_points);
-    g_vec_ball_points.push_back(ball_point);
+	std::lock_guard<std::mutex> lock(g_mutex_ball_points);
+	g_vec_ball_points.push_back(ball_point);
 
-    if (g_vec_ball_points.size() > 10) {
-        g_vec_ball_points.pop_back();
-    }
+	if (g_vec_ball_points.size() > 10) {
+		g_vec_ball_points.pop_back();
+	}
 }
 
 /**
@@ -148,7 +149,7 @@ void callbackCameraPoseDesired(const geometry_msgs::PoseStamped & pose){
 }
 
 /**
-* Callback for the Camera Pose Real
+ * Callback for the Camera Pose Real
  * @param pose
  */
 void callbackCameraPoseReal(const geometry_msgs::PoseStamped & pose){
@@ -192,7 +193,7 @@ void callbackQreal(const path_planning::Q_real & q){
 int main(int argc, char **argv)
 {
 	ROS_INFO("Log Started!");
-    ros::init(argc, argv, "log_node");
+	ros::init(argc, argv, "log_node");
 
 	//ROS
 	ros::NodeHandle nh;
@@ -213,16 +214,16 @@ int main(int argc, char **argv)
 	geometry_msgs::PointStamped point_file;
 
 	//File
-    FileWriter fw("log.csv");
+	FileWriter fw("log.csv");
 
-    //GNUPlot
-    Gnuplot gp;
+	//GNUPlot
+	Gnuplot gp;
 
 	//WallTime
-    //	ros::WallTime walltime;
+	//	ros::WallTime walltime;
 	int frame_rate = 1;
 
-    while(nh.ok()){
+	while(nh.ok()){
 		//Debugging
 		ros::param::get(PARAM_DEBUGGING, debugging);
 		//Frame Rate
@@ -230,11 +231,11 @@ int main(int argc, char **argv)
 		ros::Rate loop_rate(frame_rate);
 
 		//TODO
-        std::lock_guard<std::mutex> lock(g_mutex_ball_points);
-        gp << "plot ";
-        gp << gp.binFile1d(g_vec_ball_points, "record") << "with lines title 'test'";
-        gp << "\n";
-        lock.~lock_guard();
+		std::lock_guard<std::mutex> lock(g_mutex_ball_points);
+		gp << "plot ";
+		gp << gp.binFile1d(g_vec_ball_points, "record") << "with lines title 'test'";
+		gp << "\n";
+		lock.~lock_guard();
 
 		//And sleep
 		loop_rate.sleep();

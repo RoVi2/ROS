@@ -120,7 +120,7 @@ bool findWhiteBall(cv::Mat const &img, cv::Point2d &center, double &circumferenc
 
 	cv::inRange(hsv_img, cv::Scalar(25, 70, 100), cv::Scalar(100, 255, 255), filt_bin_img);
 	morphologyEx(filt_bin_img, filt_bin_img, 0, getStructuringElement(0, Size(9,9), Point(4,4)));
-    morphologyEx(filt_bin_img, filt_bin_img, 1, getStructuringElement(0, Size(9,9), Point(4,4)));
+	morphologyEx(filt_bin_img, filt_bin_img, 1, getStructuringElement(0, Size(9,9), Point(4,4)));
 	//removeSmallBlobs(filt_bin_img, 1000);
 
 	// Find contours.
@@ -485,7 +485,7 @@ geometry_msgs::Point stereopsis(cv::Point & tracked_point, Mat imageLeft, Mat im
 			p1.y = erN.at<double>(1, 0);
 		} else {
 			double deltaA = (erN.at<double>(1, 0) - mrN.at<double>(1, 0))
-																									/ (erN.at<double>(0, 0) - mrN.at<double>(0, 0));
+																											/ (erN.at<double>(0, 0) - mrN.at<double>(0, 0));
 			double b = mrN.at<double>(1, 0) - deltaA * mrN.at<double>(0, 0);
 			p1.x = 0;
 			p1.y = b;
@@ -527,7 +527,7 @@ geometry_msgs::Point stereopsis(cv::Point & tracked_point, Mat imageLeft, Mat im
 	Mat mu1 = Cl(Range(0, 3), Range(0, 1)).cross(
 			M1inf(Range(0, 3), Range(0, 1))) / cv::norm(M1inf);
 	Mat v1 = M1inf(Range(0, 3), Range(0, 1))
-																						/ cv::norm(M1inf(Range(0, 3), Range(0, 1)));
+																								/ cv::norm(M1inf(Range(0, 3), Range(0, 1)));
 
 	//Compute the point of infinity for the second image and compute Plucker line parameters
 	cv::Mat M2inf = Pxr.inv(DECOMP_SVD) * m_r;
@@ -551,9 +551,9 @@ geometry_msgs::Point stereopsis(cv::Point & tracked_point, Mat imageLeft, Mat im
 
 	//Compute the closest point of intersection for the two lines of infinity
 	Mat M1 = (v1 * v2mu2T - (v1 * v2T) * v1 * v2mu1T)
-																						/ pow(cv::norm(v1.cross(v2)), 2) * v1 + v1.cross(mu1);
+																								/ pow(cv::norm(v1.cross(v2)), 2) * v1 + v1.cross(mu1);
 	Mat M2 = (v2 * v1mu1T - (v2 * v1T) * v2 * v1mu2T)
-																						/ pow(cv::norm(v2.cross(v1)), 2) * v2 + v2.cross(mu1);
+																								/ pow(cv::norm(v2.cross(v1)), 2) * v2 + v2.cross(mu1);
 
 	if (debugging) cout << endl << "Closest point on the two lines"<< endl << "M1: "
 			<< M1 << endl << "M2: " << M2 << endl;
