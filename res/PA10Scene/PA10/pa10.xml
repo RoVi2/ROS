@@ -62,7 +62,8 @@
 		<AccLimit max="360" />
 	</Joint>
 	<Joint name="Joint7" type="Revolute">
-		<!-- <RPY>00 90 0</RPY> -->
+		<!-- <RPY>0 90 0</RPY> -->
+		<!-- <RPY>90 44 90</RPY> -->
 		<RPY>-90 32.4 -90</RPY>
 		<Pos>0.08 0 0</Pos>
 		<PosLimit min="-360" max="360" />
@@ -105,5 +106,6 @@
 	
 	<CollisionSetup file="CollisionSetup.xml" />
 	
-	<Q name="Home">0 -0.65 0 1.8 0 0.42 0</Q>
+	<!-- <Q name="Home">0 -0.65 0 1.8 0 0.42 0</Q> -->
+	<Q name="Home">1.14 -0.65 0 1.8 0 -0.96 0.9</Q>
 </SerialDevice>

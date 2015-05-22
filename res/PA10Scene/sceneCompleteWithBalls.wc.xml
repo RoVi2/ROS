@@ -23,8 +23,10 @@
 	</Frame>
 
 	<Frame name="Camera" refframe="Tool">
-		<RPY>-90 0 -90</RPY>
-		<Pos>0 0 0.055</Pos>
+		<RPY>0 0 -90</RPY>
+		<!-- <RPY>-90 0 -90</RPY> -->
+		<!-- <RPY>0 90 0</RPY> -->
+		<Pos>0 0 0.095</Pos>
 	</Frame>
 	
 	<Frame name="CameraSim" refframe="Camera" type="Movable">
@@ -55,6 +57,24 @@
 		</Drawable>
 	</Frame> 
 
+<!-- 	<Drawable name="Obstacle1" refframe="WPtable">
+		<RPY>0 0 0 </RPY>
+		<Pos> 0 0.4 1.78 </Pos>
+		<Box x="0.01" y="0.1" z="1.5" />
+	</Drawable>
+
+	<Drawable name="Obstacle2" refframe="WPtable">
+		<RPY>0 0 0 </RPY>
+		<Pos> 0.25 0.4 1.78 </Pos>
+		<Box x="0.01" y="0.1" z="1.5" />
+	</Drawable>
+
+	<Drawable name="Obstacle3" refframe="WPtable">
+		<RPY>0 0 0 </RPY>
+		<Pos> -0.25 0.4 1.78 </Pos>
+		<Box x="0.01" y="0.1" z="1.5" />
+	</Drawable> -->
+
 	<!--Frame name="MarkerTexture" refframe="Marker">
 		<RPY>180 0 0</RPY>
 		<Pos>0 0 0.0051</Pos>
@@ -62,7 +82,8 @@
 
 	<Frame name="WPtable" refframe="WORLD">
 		<RPY> 0 0 0 </RPY>
-		<Pos> 0 -1.10 0.02 </Pos>
+		<!-- <Pos> 0 -1.10 0.02 </Pos> -->
+		<Pos> 0 -0.90 0.02 </Pos>
 		<Drawable name="WPtablegeo" refframe="WPtable">
 			<Polytope file="Geometry/WPtable" />
 		</Drawable>

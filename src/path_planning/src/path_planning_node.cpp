@@ -40,14 +40,17 @@ using namespace rw::trajectory;
 using namespace rwlibs::pathplanners;
 using namespace rwlibs::proximitystrategies;
 
+//Real Robot or Simulation
+#define SIMULATION 0 //1=PA10_dummy 0=pa10controller
+
 //RobWork Paths
 #define WORKCELL_PATH "../../res/PA10Scene/sceneComplete.wc.xml"
 #define ROBOT_NAME "PA10"
 
 //ROS Paths
-#define SUBSCRIBER "/balltracker/points"
-//#define SUBSCRIBER "/points_server/points"
-//#define SUBSCRIBER "/kalman_filter/points"
+//#define SUBSCRIBER "/balltracker/points"
+#define SUBSCRIBER "/kalman_filter/points"
+
 #define PARAM_DEBUGGING "/path_planning/debugging"
 #define PARAM_FRAME_RATE "/frame_rate"
 #define PARAM_PATH_NOT_FOUND_TIME_LIMIT "/path_planning/path_not_found_time_limit"
@@ -70,9 +73,9 @@ using namespace rwlibs::proximitystrategies;
 //Global variables
 Vector3D<double> point_kalman;
 bool point_updated = false;
-float x_offset = 0/Rad2Deg;
-float y_offset = 90/Rad2Deg;
-float z_offset = -57.6/Rad2Deg;
+float x_offset = 0*Deg2Rad;
+float y_offset = 90*Deg2Rad;
+float z_offset = -57.6*Deg2Rad;
 
 /**
  * Callback method to get the points from ROS
@@ -84,8 +87,43 @@ void callBack(const geometry_msgs::PointStampedConstPtr & point_ros){
 	point_updated = true;
 }
 
+#if (SIMULATION == 0)
 /**
  * Sends the desired Q to the real robot
+ * @param Q_desired
+ * @param client_setJointConfig
+ * @param srv_setJointConfig
+ * @param debugging
+ */
+void sendRobotToQ(rw::math::Q & Q_desired,
+		ros::ServiceClient & client_setJointConfig,
+		pa10controller::setJointConfig & srv_setJointConfig,
+		bool & debugging){
+	//Copy the joint values in to the service message
+	for (unsigned char joint=0; joint<7; joint++)
+	{
+		srv_setJointConfig.request.commands[joint] =  1;
+		srv_setJointConfig.request.positions[joint] = Q_desired[joint]*Rad2Deg;
+	}
+	//Publish it!
+	if (client_setJointConfig.call(srv_setJointConfig))
+	{
+		if (debugging) cout << "	" << Q_desired << endl;
+
+		/*
+		 * Maybe problems with sending too many Q? This is your place!
+		 */
+		Timer waitUntilRobot;
+		waitUntilRobot.resetAndResume();
+		while (waitUntilRobot.getTimeMs() <= 250)
+			; //Do nothing
+	}
+	else if (debugging) ROS_ERROR("Robot not found");
+}
+
+#elif (SIMULATION == 1)
+/**
+ * Sends the desired Q to the dummy robot
  * @param Q_desired
  * @param client_setJointConfig
  * @param srv_setJointConfig
@@ -111,11 +149,12 @@ void sendRobotToQ(rw::math::Q & Q_desired,
 		 */
 		Timer waitUntilRobot;
 		waitUntilRobot.resetAndResume();
-		while (waitUntilRobot.getTimeMs() <= 500)
+		while (waitUntilRobot.getTimeMs() <= 250)
 			; //Do nothing
 	}
 	else if (debugging) ROS_ERROR("Robot not found");
 }
+#endif
 
 /**
  *
@@ -154,11 +193,17 @@ int main(int argc, char** argv)
 	ros::Publisher pub_camera_pose_real = nh.advertise<geometry_msgs::PoseStamped>(MSG_CAMERA_POSE_REAL, 1);
 
 	//Services
+#if SIMULATION==0
+	ros::ServiceClient client_getJointConfig = nh.serviceClient<pa10controller::getJointConfig>(SRV_GET_JOINT);
+	ros::ServiceClient client_setJointConfig = nh.serviceClient<pa10controller::setJointConfig>(SRV_SET_JOINT);
+	pa10controller::getJointConfig srv_getJointConfig;
+	pa10controller::setJointConfig srv_setJointConfig;
+#elif SIMULATION==1
 	ros::ServiceClient client_getJointConfig = nh.serviceClient<pa10_dummy::getJointConfig>(SRV_GET_JOINT);
 	ros::ServiceClient client_setJointConfig = nh.serviceClient<pa10_dummy::setJointConfig>(SRV_SET_JOINT);
 	pa10_dummy::getJointConfig srv_getJointConfig;
 	pa10_dummy::setJointConfig srv_setJointConfig;
-
+#endif
 	/*
 	 * RobWork
 	 */
@@ -191,9 +236,10 @@ int main(int argc, char** argv)
 	Rotation3D<> R_y = Rotation3D<>(cos(y_offset),0,sin(y_offset),0,1,0,-sin(y_offset),0,cos(y_offset));
 	Rotation3D<> R_z = Rotation3D<>(cos(z_offset),-sin(z_offset),0,sin(z_offset),cos(z_offset),0,0,0,1);
 	RPY<> offset_for_worcell = RPY<>(R_y*R_z);
+	cout << "//////////////////////////////////////////////////////////////////////////" << endl;
 	cout << "Include this offset to the workcell: " << offset_for_worcell[0]*Rad2Deg << " " <<
 			offset_for_worcell[1]*Rad2Deg << " " << offset_for_worcell[2]*Rad2Deg << endl;
-
+	cout << "//////////////////////////////////////////////////////////////////////////" << endl;
 
 	ros::WallTime walltime;
 
@@ -229,8 +275,9 @@ int main(int argc, char** argv)
 			if (debugging) cout << GREEN"	Camera: " RESET << point_kalman << endl;
 			//Updates the robot's position
 			client_getJointConfig.call(srv_getJointConfig);
-			for (unsigned char joint = 0; joint < 7; ++joint)
+			for (unsigned char joint = 0; joint < 7; ++joint){
 				Q_current[joint] = srv_getJointConfig.response.positions[joint]*Deg2Rad;
+			}
 			device->setQ(Q_current, state);
 			//Reference the frame to the robot's base
 			point_kalman = (device->baseTframe(wc->findFrame("Camera"), state)) * point_kalman;
@@ -242,14 +289,14 @@ int main(int argc, char** argv)
 			Vector3D<double> point_kalman_polar (radius, angle, height);
 			if (debugging) cout << GREEN"	and in Polar: " RESET << point_kalman_polar << endl;
 			//The camera position will be 0.5 meters from the kalman point in the radial direction
-			Vector3D<double> camera_position_polar = point_kalman_polar - Vector3D<double>(0.3,0,0);
+			Vector3D<double> camera_position_polar = point_kalman_polar - Vector3D<double>(0.4,0,0);
 			Vector3D<double> camera_position (
 					camera_position_polar[0]*cos(camera_position_polar[1]), //r*cos(angle)
 					camera_position_polar[0]*sin(camera_position_polar[1]), //r*sin(angle)
 					camera_position_polar[2] //height
 			);
 			//The rotation has to be that which is oriented to the point.
-			RPY<double> cameraRotation = RPY<> (1.57+z_offset, 0, 0);
+			RPY<double> cameraRotation = RPY<> (-25*Deg2Rad, 0, 0);
 			//So the transformation matrix is created with the translation and the rotation matrices
 			Transform3D<double> cameraTransfomationMatrix = Transform3D<double>(camera_position, cameraRotation.toRotation3D());
 			if (debugging) cout << GREEN"	Position for Camera: " RESET << cameraTransfomationMatrix.P() << endl;
@@ -276,8 +323,9 @@ int main(int argc, char** argv)
 				pathToDesiredQ.clear();
 				//Get current position of the real robot
 				client_getJointConfig.call(srv_getJointConfig);
-				for (unsigned char joint=0; joint<device->getDOF(); joint++)
+				for (unsigned char joint = 0; joint < 7; ++joint){
 					Q_current[joint] = srv_getJointConfig.response.positions[joint]*Deg2Rad;
+				}
 				device->setQ(Q_current, state);
 
 				//Calculate the path from the current Q to the desired Q and show the calculation time
