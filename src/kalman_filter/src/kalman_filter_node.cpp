@@ -98,6 +98,7 @@ int main(int argc, char **argv)
 	// [ 0 0 0  0	0  0 	0			1 			0		 ]
 	// [ 0 0 0  0	0  0 	0			0 			1		 ]
 	setIdentity(kf.transitionMatrix);
+	setIdentity(kf.errorCovPost);
 
 	//Measure Matrix H
 	//[ 1 0 0 0 0 0 0 0 0]
@@ -127,26 +128,35 @@ int main(int argc, char **argv)
 	kf.processNoiseCov.at<float>(60) = 0.0011;
 	kf.processNoiseCov.at<float>(70) = 0.0052;
 	kf.processNoiseCov.at<float>(80) = 0.0241;
+/*	kf.processNoiseCov.at<float>(0)  = 1e-2;
+	kf.processNoiseCov.at<float>(10) = 1e-2;
+	kf.processNoiseCov.at<float>(20) = 1e-2;
+	kf.processNoiseCov.at<float>(30) = 2.0f;
+	kf.processNoiseCov.at<float>(40) = 2.0f;
+	kf.processNoiseCov.at<float>(50) = 2.0f;
+	kf.processNoiseCov.at<float>(60) = 3.0f;
+	kf.processNoiseCov.at<float>(70) = 3.0f;
+	kf.processNoiseCov.at<float>(80) = 3.0f;*/
 
 	//Measure Noise Covariance Matrix R
-	//[ 1 0 0 0 0 0 0 0 0]
-	//[ 0 1 0 0 0 0 0 0 0]
-	//[ 0 0 1 0 0 0 0 0 0]
-	kf.measurementMatrix = Mat::zeros(measSize, stateSize, type);
-	kf.measurementMatrix.at<float>(0)  = 0.0003059;
-	kf.measurementMatrix.at<float>(1) = 0.0000698;
-	kf.measurementMatrix.at<float>(2) = -0.000501;
-	kf.measurementMatrix.at<float>(10)  = 0.0000698;
-	kf.measurementMatrix.at<float>(11) = 0.000099;
-	kf.measurementMatrix.at<float>(12) = -0.0000384;
-	kf.measurementMatrix.at<float>(20)  = -0.000501;
-	kf.measurementMatrix.at<float>(21) = -0.0000384;
-	kf.measurementMatrix.at<float>(22) = 0.000904;
+	//[ 1 0 0 ]
+	//[ 0 1 0 ]
+	//[ 0 0 1 ]
+	kf.measurementNoiseCov = Mat::zeros(measSize, measSize, type);
+	kf.measurementNoiseCov.at<float>(0)  = 0.0003059;
+	kf.measurementNoiseCov.at<float>(1) = 0.0000698;
+	kf.measurementNoiseCov.at<float>(2) = -0.000501;
+	kf.measurementNoiseCov.at<float>(3)  = 0.0000698;
+	kf.measurementNoiseCov.at<float>(4) = 0.000099;
+	kf.measurementNoiseCov.at<float>(5) = -0.0000384;
+	kf.measurementNoiseCov.at<float>(6)  = -0.000501;
+	kf.measurementNoiseCov.at<float>(7) = -0.0000384;
+	kf.measurementNoiseCov.at<float>(8) = 0.000904;
 
 
 
 	//Measures Noise Covariance Matrix R
-	setIdentity(kf.measurementNoiseCov, Scalar(1e-1));
+	//setIdentity(kf.measurementNoiseCov, Scalar(1e-1));
 
 	//Variables to measure the time
 	double ticks = 0;
