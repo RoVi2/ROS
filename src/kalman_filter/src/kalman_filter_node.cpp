@@ -128,15 +128,6 @@ int main(int argc, char **argv)
 	kf.processNoiseCov.at<float>(60) = 0.0011;
 	kf.processNoiseCov.at<float>(70) = 0.0052;
 	kf.processNoiseCov.at<float>(80) = 0.0241;
-/*	kf.processNoiseCov.at<float>(0)  = 1e-2;
-	kf.processNoiseCov.at<float>(10) = 1e-2;
-	kf.processNoiseCov.at<float>(20) = 1e-2;
-	kf.processNoiseCov.at<float>(30) = 2.0f;
-	kf.processNoiseCov.at<float>(40) = 2.0f;
-	kf.processNoiseCov.at<float>(50) = 2.0f;
-	kf.processNoiseCov.at<float>(60) = 3.0f;
-	kf.processNoiseCov.at<float>(70) = 3.0f;
-	kf.processNoiseCov.at<float>(80) = 3.0f;*/
 
 	//Measure Noise Covariance Matrix R
 	//[ 1 0 0 ]
@@ -152,11 +143,6 @@ int main(int argc, char **argv)
 	kf.measurementNoiseCov.at<float>(6)  = -0.000501;
 	kf.measurementNoiseCov.at<float>(7) = -0.0000384;
 	kf.measurementNoiseCov.at<float>(8) = 0.000904;
-
-
-
-	//Measures Noise Covariance Matrix R
-	//setIdentity(kf.measurementNoiseCov, Scalar(1e-1));
 
 	//Variables to measure the time
 	double ticks = 0;

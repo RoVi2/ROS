@@ -13,6 +13,7 @@
 //STD
 #include <iostream>
 #include <fstream>
+#include <array>
 #include <deque>
 #include <mutex>
 
@@ -31,21 +32,25 @@
 #define PARAM_DEBUGGING "/points_server/debugging"
 #define PARAM_FRAME_RATE "/frame_rate"
 
+constexpr int BUFFERS_SIZE = 10;
+
 std::deque<geometry_msgs::PointStamped> g_ball_points;
 std::deque<geometry_msgs::PointStamped> g_kalman_points;
 std::deque<geometry_msgs::PoseStamped> g_camera_desired_poses;
 std::deque<geometry_msgs::PoseStamped> g_camera_real_poses;
+std::deque<std::array<float, 7>> g_real_qs;
+std::deque<std::array<float, 7>> g_desired_qs;
+
 std::mutex g_mutex_ball_points;
 std::mutex g_mutex_kalman_points;
 std::mutex g_mutex_camera_desired_poses;
 std::mutex g_mutex_camera_real_poses;
-float g_q_real[7];
-float g_q_desired[7];
+std::mutex g_mutex_real_qs;
+std::mutex g_mutex_desired_qs;
 
-// Tells gnuplot-iostream how to print objects of class geometry_msgs::PointStamped.
+// Tells gnuplot-iostream how to print these objects.
 namespace gnuplotio
 {
-
 template<>
 struct BinfmtSender<geometry_msgs::PointStamped> {
 	static void send(std::ostream &stream)
@@ -65,25 +70,28 @@ struct BinarySender<geometry_msgs::PointStamped> {
 		BinarySender<double>::send(stream, ps.point.z);
 	}
 };
-
 } // namespace gnuplotio
 
 // Writes CSV file
 class FileWriter
 {
-public:
+private:
 	typedef geometry_msgs::PointStamped point_type;
 	typedef geometry_msgs::PoseStamped pose_type;
+	typedef std::array<float, 7> q_type;
 
+public:
 	FileWriter(std::string const &filename)
-	: ofs_(filename)
+		: ofs_(filename)
 	{
 		ofs_ << "ball_x,ball_y,ball_z,"
 				<< "kalman_x,kalman_y,kalman_z,"
 				<< "cam_desired_pos_x,cam_desired_pos_y,cam_desired_pos_z,"
 				<< "cam_desired_orient_x,cam_desired_orient_y,cam_desired_orient_z,cam_desired_orient_w,"
 				<< "cam_real_pos_x,cam_real_pos_y,cam_real_pos_z,"
-				<< "cam_real_orient_x,cam_real_orient_y,cam_real_orient_z,cam_real_orient_w\n";
+				<< "cam_real_orient_x,cam_real_orient_y,cam_real_orient_z,cam_real_orient_w,"
+				<< "q_real_0,q_real_1,q_real_2,q_real_3,q_real_4,q_real_5,q_real_6,"
+				<< "q_desired_0,q_desired_1,q_desired_2,q_desired_3,q_desired_4,q_desired_5,q_desired_6\n";
 	}
 
 	~FileWriter()
@@ -91,14 +99,30 @@ public:
 		ofs_.close();
 	}
 
-	void write(point_type const &ball, point_type const &kalman, pose_type const &camera_desired, pose_type const &camera_real)
+	void write(point_type const &ball, point_type const &kalman,
+		pose_type const &camera_desired, pose_type const &camera_real,
+		q_type const &q_real, q_type const &q_desired)
 	{
 		ofs_ << ball.point.x << "," << ball.point.y << "," << ball.point.z << ","
 				<< kalman.point.x << "," << kalman.point.y << "," << kalman.point.z << ","
 				<< camera_desired.pose.position.x << "," << camera_desired.pose.position.y << "," << camera_desired.pose.position.z << ","
 				<< camera_desired.pose.orientation.x << "," << camera_desired.pose.orientation.y << "," << camera_desired.pose.orientation.z << ","<< camera_desired.pose.orientation.w << ","
 				<< camera_real.pose.position.x << "," << camera_real.pose.position.y << "," << camera_real.pose.position.z << ","
-				<< camera_real.pose.orientation.x << "," << camera_real.pose.orientation.y << "," << camera_real.pose.orientation.z << "," << camera_real.pose.orientation.w << "\n";
+				<< camera_real.pose.orientation.x << "," << camera_real.pose.orientation.y << "," << camera_real.pose.orientation.z << "," << camera_real.pose.orientation.w << ",";
+
+		for (int i = 0; i < 7; ++i) {
+			ofs_ << q_real[i] << ",";
+		}
+
+		for (int i = 0; i < 7; ++i) {
+			ofs_ << q_desired[i];
+
+			if (i == 6) {
+				 ofs_ << "\n"; // Last column
+			} else {
+				ofs_ << ",";
+			}
+		}
 	}
 
 private:
@@ -114,7 +138,7 @@ void callbackBall(const geometry_msgs::PointStamped &ps)
 	std::lock_guard<std::mutex> lock(g_mutex_ball_points);
 	g_ball_points.push_front(ps);
 
-	if (g_ball_points.size() > 10) {
+	if (g_ball_points.size() > BUFFERS_SIZE) {
 		g_ball_points.pop_back();
 	}
 }
@@ -128,7 +152,7 @@ void callbackKalman(const geometry_msgs::PointStamped &ps)
 	std::lock_guard<std::mutex> lock(g_mutex_kalman_points);
 	g_kalman_points.push_front(ps);
 
-	if (g_kalman_points.size() > 10) {
+	if (g_kalman_points.size() > BUFFERS_SIZE) {
 		g_kalman_points.pop_back();
 	}
 }
@@ -142,7 +166,7 @@ void callbackCameraPoseDesired(const geometry_msgs::PoseStamped &ps)
 	std::lock_guard<std::mutex> lock(g_mutex_camera_desired_poses);
 	g_camera_desired_poses.push_front(ps);
 
-	if (g_camera_desired_poses.size() > 10) {
+	if (g_camera_desired_poses.size() > BUFFERS_SIZE) {
 		g_camera_desired_poses.pop_back();
 	}
 }
@@ -156,7 +180,7 @@ void callbackCameraPoseReal(const geometry_msgs::PoseStamped &ps)
 	std::lock_guard<std::mutex> lock(g_mutex_camera_real_poses);
 	g_camera_real_poses.push_front(ps);
 
-	if (g_camera_real_poses.size() > 10) {
+	if (g_camera_real_poses.size() > BUFFERS_SIZE) {
 		g_camera_real_poses.pop_back();
 	}
 }
@@ -167,8 +191,19 @@ void callbackCameraPoseReal(const geometry_msgs::PoseStamped &ps)
  */
 void callbackQdesired(const path_planning::Q_desired &q)
 {
-	for (unsigned char joint = 0; joint < 7; ++joint)
-		g_q_desired[joint] = q.positions[joint];
+
+	std::array<float, 7> q_desired;
+
+	for (unsigned char joint = 0; joint < 7; ++joint) {
+		q_desired[joint] = q.positions[joint];
+	}
+
+	std::lock_guard<std::mutex> lock(g_mutex_desired_qs);
+	g_desired_qs.push_front(q_desired);
+
+	if (g_desired_qs.size() > BUFFERS_SIZE) {
+		g_desired_qs.pop_back();
+	}
 }
 
 /**
@@ -177,8 +212,18 @@ void callbackQdesired(const path_planning::Q_desired &q)
  */
 void callbackQreal(const path_planning::Q_real &q)
 {
-	for (unsigned char joint = 0; joint < 7; ++joint)
-		g_q_real[joint] = q.positions[joint];
+	std::array<float, 7> q_real;
+
+	for (unsigned char joint = 0; joint < 7; ++joint) {
+		q_real[joint] = q.positions[joint];
+	}
+
+	std::lock_guard<std::mutex> lock(g_mutex_real_qs);
+	g_real_qs.push_front(q_real);
+
+	if (g_real_qs.size() > BUFFERS_SIZE) {
+		g_real_qs.pop_back();
+	}
 }
 
 /**
@@ -205,16 +250,12 @@ int main(int argc, char **argv)
 	//File
 	FileWriter fw("log.csv");
 
-	//Debugging parameter
-	bool debugging = true;
-
 	//GNUPlot
 	Gnuplot gp;
 
-	//WallTime
-	//  ros::WallTime walltime;
+	//Debugging parameter
+	bool debugging = true;
 	int frame_rate = 1;
-
 	bool write_file = true;
 	bool feed_gnuplot = true;
 
@@ -230,27 +271,36 @@ int main(int argc, char **argv)
 		std::lock_guard<std::mutex> lock_kalman(g_mutex_kalman_points);
 		std::lock_guard<std::mutex> lock_cam_desired(g_mutex_camera_desired_poses);
 		std::lock_guard<std::mutex> lock_cam_real(g_mutex_camera_real_poses);
+		std::lock_guard<std::mutex> lock_real_qs(g_mutex_real_qs);
+		std::lock_guard<std::mutex> locl_desired_qs(g_mutex_desired_qs);
 
 		if (!g_ball_points.empty()
 				&& !g_kalman_points.empty()
 				&& !g_camera_desired_poses.empty()
-				&& !g_camera_real_poses.empty()) {
+				&& !g_camera_real_poses.empty()
+				&& !g_real_qs.empty()
+				&& !g_desired_qs.empty()) {
 			geometry_msgs::PointStamped ball = g_ball_points.front();
 			geometry_msgs::PointStamped kalman = g_kalman_points.front();
 			geometry_msgs::PoseStamped cam_desired = g_camera_desired_poses.front();
 			geometry_msgs::PoseStamped cam_real = g_camera_real_poses.front();
+			std::array<float, 7> q_real = g_real_qs.front();
+			std::array<float, 7> q_desired = g_desired_qs.front();
 
 			if (write_file) {
-				fw.write(ball, kalman, cam_desired, cam_real);
+				fw.write(ball, kalman, cam_desired, cam_real, q_real, q_desired);
 			}
 
-			if (feed_gnuplot){
+			if (feed_gnuplot) {
 				gp << "splot ";
 				gp << gp.binFile1d(g_ball_points, "record") << "with lines title 'test'";
 				gp << "\n";
 			}
 		}
 
+		// Mutexes must be released before ROS callbacks are processed.
+		locl_desired_qs.~lock_guard();
+		lock_real_qs.~lock_guard();
 		lock_cam_real.~lock_guard();
 		lock_cam_desired.~lock_guard();
 		lock_kalman.~lock_guard();
