@@ -33,8 +33,10 @@ void ballPredictedCallback(const geometry_msgs::PointStampedConstPtr & point_ros
 	);
 }
 rw::math::Transform3D<> ballDetectedTransformation;
+rw::math::Transform3D<> ballDetectedTransformationSecond;
 void ballDetectedCallback(const geometry_msgs::PointStampedConstPtr & point_ros){
-	ballDetectedTransformation = rw::math::Transform3D<>(
+	ballDetectedTransformation = ballDetectedTransformationSecond;
+	ballDetectedTransformationSecond = rw::math::Transform3D<>(
 			rw::math::Vector3D<>(point_ros->point.x,point_ros->point.y,point_ros->point.z),
 			rw::math::RPY<>(0,0,0).toRotation3D()
 	);
