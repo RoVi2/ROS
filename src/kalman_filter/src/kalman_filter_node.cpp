@@ -118,20 +118,20 @@ int main(int argc, char **argv)
 	//  [0	 0	 0	 0	 0	 0	Ea_x 0	 0	 ]
 	//  [0	 0	 0	 0	 0	 0	0	Ea_y 0	 ]
 	//  [0	 0	 0	 0	 0	 0	0	 0	 Ea_z]
-	kf.processNoiseCov.at<float>(0)  = 0.0003;
-	kf.processNoiseCov.at<float>(10) = 0.0001;
-	kf.processNoiseCov.at<float>(20) = 0.0009;
-	kf.processNoiseCov.at<float>(30) = 0.0001;
-	kf.processNoiseCov.at<float>(40) = 0.0003;
-	kf.processNoiseCov.at<float>(50) = 0.0011;
-	kf.processNoiseCov.at<float>(60) = 0.0011;
-	kf.processNoiseCov.at<float>(70) = 0.0052;
-	kf.processNoiseCov.at<float>(80) = 0.0241;
+	kf.processNoiseCov.at<float>(0)  = 0.003;
+	kf.processNoiseCov.at<float>(10) = 0.001;
+	kf.processNoiseCov.at<float>(20) = 0.009;
+	kf.processNoiseCov.at<float>(30) = 0.001;
+	kf.processNoiseCov.at<float>(40) = 0.003;
+	kf.processNoiseCov.at<float>(50) = 0.011;
+	kf.processNoiseCov.at<float>(60) = 0.011;
+	kf.processNoiseCov.at<float>(70) = 0.052;
+	kf.processNoiseCov.at<float>(80) = 0.241;
 
 	//Measure Noise Covariance Matrix R
-	//[ 1 0 0 0 0 0 0 0 0]
-	//[ 0 1 0 0 0 0 0 0 0]
-	//[ 0 0 1 0 0 0 0 0 0]
+	//[ 1 0 0]
+	//[ 0 1 0]
+	//[ 0 0 1]
 	kf.measurementMatrix = Mat::zeros(measSize, stateSize, type);
 	kf.measurementMatrix.at<float>(0)  = 0.0003059;
 	kf.measurementMatrix.at<float>(1) = 0.0000698;
