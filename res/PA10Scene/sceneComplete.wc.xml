@@ -23,12 +23,12 @@
 	</Frame>
 
 	<Frame name="Camera" refframe="Tool">
-		<RPY>0 90 0</RPY>
+		<RPY>-90 0 -90</RPY>
 		<Pos>0 0 0.055</Pos>
 	</Frame>
 	
 	<Frame name="CameraSim" refframe="Camera" type="Movable">
-		<RPY>0 0 180</RPY>
+		<RPY>0 180 0</RPY>
 		<Pos>0 0 0</Pos>
 		<Property name="Camera">50 1024 768</Property>
 	</Frame>
@@ -62,7 +62,7 @@
 
 	<Frame name="WPtable" refframe="WORLD">
 		<RPY> 0 0 0 </RPY>
-		<Pos> 0 -1.10 1.02 </Pos>
+		<Pos> 0 -1.10 0.02 </Pos>
 		<Drawable name="WPtablegeo" refframe="WPtable">
 			<Polytope file="Geometry/WPtable" />
 		</Drawable>

@@ -63,7 +63,7 @@
 	</Joint>
 	<Joint name="Joint7" type="Revolute">
 		<!-- <RPY>00 90 0</RPY> -->
-		<RPY>90 44 90</RPY>
+		<RPY>-90 32.4 -90</RPY>
 		<Pos>0.08 0 0</Pos>
 		<PosLimit min="-360" max="360" />
 		<VelLimit max="360" />

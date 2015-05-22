@@ -25,8 +25,8 @@ int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "pa10client");
 	ros::NodeHandle n;
-	ros::ServiceClient client = n.serviceClient<pa10controller::setJointConfig>("pa10/setJointsConfig");
-	//   ros::ServiceClient client = n.serviceClient<pa10controller::addToQueue>("pa10/addItemtoQueue");
+	ros::ServiceClient client = n.serviceClient<pa10controller::setJointConfig>("/setJointsConfig");
+	//   ros::ServiceClient client = n.serviceClient<pa10controller::addToQueue>("/addItemtoQueue");
 	//	pa10controller::addToQueue config;
 
 	pa10controller::setJointConfig config;
