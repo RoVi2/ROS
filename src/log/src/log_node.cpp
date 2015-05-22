@@ -275,13 +275,13 @@ int main(int argc, char **argv)
 		std::lock_guard<std::mutex> locl_desired_qs(g_mutex_desired_qs);
 
 		if (!g_ball_points.empty()
-				&& !g_kalman_points.empty()
+				&& g_kalman_points.size() >= 2
 				&& !g_camera_desired_poses.empty()
 				&& !g_camera_real_poses.empty()
 				&& !g_real_qs.empty()
 				&& !g_desired_qs.empty()) {
 			geometry_msgs::PointStamped ball = g_ball_points.front();
-			geometry_msgs::PointStamped kalman = g_kalman_points.front();
+			geometry_msgs::PointStamped kalman = g_kalman_points.at(1);
 			geometry_msgs::PoseStamped cam_desired = g_camera_desired_poses.front();
 			geometry_msgs::PoseStamped cam_real = g_camera_real_poses.front();
 			std::array<float, 7> q_real = g_real_qs.front();
