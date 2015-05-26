@@ -6,5 +6,5 @@ set xlabel 'x'
 set ylabel 'y'
 set zlabel 'z'
 
-splot fn using 1:2:3 with linespoints title 'ball',\
-fn using 4:5:6 with linespoints title 'kalman'
+splot fn using 2:3:4 with linespoints title 'ball',\
+fn using 5:6:7 with linespoints title 'kalman'
