@@ -1,0 +1,16 @@
+set terminal tikz
+
+set datafile separator ','
+
+myfont=',8'
+set xtics font myfont
+set ytics font myfont
+set ztics font myfont
+set xlabel font myfont
+set ylabel font myfont
+set zlabel font myfont
+set cbtics font myfont
+set cblabel font myfont
+set key font myfont
+set label font myfont
+set title font myfont

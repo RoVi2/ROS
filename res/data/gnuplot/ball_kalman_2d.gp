@@ -1,7 +1,7 @@
-set datafile separator ','
+load 'common.gp.in'
 set key autotitle columnhead
 
-fn = '../22-05-15_22-22.csv'
+fn = '../22-05-15_22-26.csv'
 
 set xlabel 'time (s)'
 
